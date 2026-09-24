@@ -38,33 +38,43 @@
     <div class="auth-card">
       <div class="eyebrow" style="color:var(--teal)">SETU ACCESS PORTAL</div>
       <h2 id="authTitle">Sign In</h2>
-      <p class="muted" id="authSubtitle">Access the connected government service workspace.</p>
-      <div class="auth-tabs">
-        <button class="active" id="loginTab">Sign in</button>
-        <button id="signupTab">Create account</button>
+      <p class="muted" id="authSubtitle">Select your role to access your dedicated workspace.</p>
+
+      <!-- 3-Role Access Tabs matching the screenshot -->
+      <div class="auth-tabs" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 20px;">
+        <button class="active" id="roleCitizenBtn" onclick="selectRole('citizen')">Citizen</button>
+        <button id="roleReviewerBtn" onclick="selectRole('reviewer')">Reviewer</button>
+        <button id="roleAdminBtn" onclick="selectRole('admin')">Admin</button>
       </div>
+
       <form id="authForm">
-        <div class="field hidden" id="nameField">
-          <label for="authName">Full Name</label>
-          <input id="authName" autocomplete="name" placeholder="Enter your full name">
+        <input type="hidden" id="selectedRole" value="citizen">
+
+        <div class="field" id="deptField" style="display:none;">
+          <label for="authDept">Department</label>
+          <select id="authDept">
+            <option value="Revenue Department">Revenue Department</option>
+            <option value="Education Department">Education Department</option>
+            <option value="Industries Department">Industries Department</option>
+            <option value="Municipal Services">Municipal Services</option>
+            <option value="Social Justice Department">Social Justice Department</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="authEmail" id="authLabel">CITIZEN EMAIL / USERNAME</label>
+          <input id="authEmail" type="text" required placeholder="e.g. citizen@example.com or Aarav">
         </div>
         <div class="field">
-          <label for="authEmail">Email Address</label>
-          <input id="authEmail" type="email" required autocomplete="username" placeholder="you@example.com">
+          <label for="authPassword">PASSWORD</label>
+          <input id="authPassword" type="password" placeholder="Enter password">
         </div>
-        <div class="field">
-          <label for="authPassword">Password</label>
-          <input id="authPassword" type="password" required autocomplete="current-password" placeholder="Enter your password">
-        </div>
-        <button class="btn btn-primary auth-submit" id="authSubmit">Authenticate &amp; Continue -&gt;</button>
+        <button class="btn btn-primary auth-submit" id="authSubmit" style="width:100%; margin-top:10px;">Sign In as Citizen -&gt;</button>
       </form>
-      <div class="demo-box">
-        <strong>Role-Based Access Accounts:</strong><br>
-        Admin: admin@setu.gov.in / Setu@2026<br>
-        Reviewer: reviewer@setu.gov.in / Review@2026<br>
-        Citizen: citizen@example.com / Citizen@2026
+
+      <div class="demo-box" id="roleInfoBox" style="margin-top:20px;">
+        <strong>Citizen Portal:</strong> Apply for certificates, scholarships, and pensions with one-time profile entry.
       </div>
-      <button class="auth-switch" id="authSwitch">New to Setu? Register citizen account</button>
     </div>
   </section>
 </div>
