@@ -54,7 +54,7 @@ const defaultState={
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function loadState(){try{return {...clone(defaultState),...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return clone(defaultState)}}
-let state=loadState(), currentUser=null, currentPage="dashboard", authMode="login", toastTimer;
+let state=loadState(), currentUser=null, currentPage="dashboard", toastTimer;
 
 function save(){localStorage.setItem(KEY,JSON.stringify(state));updateCount()}
 function esc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -89,37 +89,89 @@ const titles={
  team:"User Roles & Access Control"
 };
 
-function setAuthMode(mode){
- authMode=mode;
- document.getElementById("loginTab").classList.toggle("active",mode==="login");
- document.getElementById("signupTab").classList.toggle("active",mode==="signup");
- document.getElementById("nameField").classList.toggle("hidden",mode==="login");
- document.getElementById("authTitle").textContent=mode==="login"?"Sign In":"Register Account";
- document.getElementById("authSubtitle").textContent=mode==="login"?"Sign in to continue to your connected service workspace.":"Create a citizen account to apply for and track connected services.";
- document.getElementById("authSubmit").textContent=mode==="login"?"Authenticate & Continue ->":"Create Citizen Account ->";
- document.getElementById("authSwitch").textContent=mode==="login"?"New to Setu? Register citizen account":"Already registered? Sign in";
- document.getElementById("authPassword").autocomplete=mode==="login"?"current-password":"new-password";
+/* Switch role tabs */
+function selectRole(role) {
+  document.getElementById("selectedRole").value = role;
+  
+  const citizenBtn = document.getElementById("roleCitizenBtn");
+  const reviewerBtn = document.getElementById("roleReviewerBtn");
+  const adminBtn = document.getElementById("roleAdminBtn");
+  const emailInput = document.getElementById("authEmail");
+  const passInput = document.getElementById("authPassword");
+  const authLabel = document.getElementById("authLabel");
+  const submitBtn = document.getElementById("authSubmit");
+  const deptField = document.getElementById("deptField");
+  const infoBox = document.getElementById("roleInfoBox");
+
+  citizenBtn.classList.toggle("active", role === "citizen");
+  reviewerBtn.classList.toggle("active", role === "reviewer");
+  adminBtn.classList.toggle("active", role === "admin");
+
+  if (role === "citizen") {
+    deptField.style.display = "none";
+    authLabel.textContent = "CITIZEN EMAIL / USERNAME";
+    emailInput.value = "citizen@example.com";
+    passInput.value = "Citizen@2026";
+    submitBtn.textContent = "Sign In as Citizen ->";
+    infoBox.innerHTML = "<strong>Citizen Portal:</strong> Apply for certificates, scholarships, and pensions with one-time profile entry.";
+  } else if (role === "reviewer") {
+    deptField.style.display = "grid";
+    authLabel.textContent = "REVIEWER OFFICER ID / EMAIL";
+    emailInput.value = "reviewer@setu.gov.in";
+    passInput.value = "Review@2026";
+    submitBtn.textContent = "Sign In as Reviewer ->";
+    infoBox.innerHTML = "<strong>Reviewer Workspace:</strong> Review incoming department requests, issue eligibility decisions, and request information.";
+  } else if (role === "admin") {
+    deptField.style.display = "none";
+    authLabel.textContent = "ADMIN ID / EMAIL";
+    emailInput.value = "admin@setu.gov.in";
+    passInput.value = "Setu@2026";
+    submitBtn.textContent = "Sign In as Admin ->";
+    infoBox.innerHTML = "<strong>Admin Console:</strong> Full access to REST API connectors, system audit logs, user permissions, and analytics.";
+  }
 }
 
-document.getElementById("loginTab").onclick=()=>setAuthMode("login");
-document.getElementById("signupTab").onclick=()=>setAuthMode("signup");
-document.getElementById("authSwitch").onclick=()=>setAuthMode(authMode==="login"?"signup":"login");
+/* Allow login/signup with ANYTHING typed in */
+document.getElementById("authForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const role = document.getElementById("selectedRole").value;
+  const input = document.getElementById("authEmail").value.trim();
+  const passVal = document.getElementById("authPassword").value;
+  const selectedDept = document.getElementById("authDept")?.value || "";
 
-document.getElementById("authForm").addEventListener("submit",e=>{
- e.preventDefault();
- const email=document.getElementById("authEmail").value.trim().toLowerCase();
- const password=document.getElementById("authPassword").value;
- if(authMode==="signup"){
-  const name=document.getElementById("authName").value.trim();
-  if(!name){toast("Enter your full name.");return}
-  if(state.users.some(u=>u.email.toLowerCase()===email)){toast("An account with this email already exists.");return}
-  if(password.length<8){toast("For this demo, use a password with at least 8 characters.");return}
-  const user={id:"u-"+Date.now(),name,email,password,role:"citizen",department:""};
-  state.users.push(user);save();login(user);logAudit("Created citizen account",email,name);toast("Welcome to Setu. Your single sign-on is active.");return
- }
- const user=state.users.find(u=>u.email.toLowerCase()===email&&u.password===password);
- if(!user){toast("Email or password is incorrect.");return}
- login(user)
+  if (!input) {
+    toast("Please enter a username or email.");
+    return;
+  }
+
+  // Find user by email or username
+  let user = state.users.find(u => u.email.toLowerCase() === input.toLowerCase() || u.name.toLowerCase() === input.toLowerCase());
+
+  // If user doesn't exist, create and sign up instantly
+  if (!user) {
+    const formattedEmail = input.includes("@") ? input : `${input.toLowerCase().replace(/\s+/g, '')}@example.com`;
+    const displayName = input.includes("@") ? input.split("@")[0] : input;
+
+    user = {
+      id: "u-" + Date.now(),
+      name: displayName.charAt(0).toUpperCase() + displayName.slice(1),
+      email: formattedEmail,
+      password: passVal || "default123",
+      role: role,
+      department: role === "reviewer" ? selectedDept : role === "admin" ? "Government of Maharashtra" : ""
+    };
+    state.users.push(user);
+    save();
+  } else {
+    // Update role/dept dynamically if existing user switches tabs
+    user.role = role;
+    if (role === "reviewer" && selectedDept) user.department = selectedDept;
+    save();
+  }
+
+  login(user);
+  logAudit(`Authenticated via ${role.toUpperCase()} portal`, user.email, user.name);
+  toast(`Logged in as ${roleName(user.role)}`);
 });
 
 function login(user){
@@ -133,7 +185,12 @@ function login(user){
  go("dashboard");
 }
 
-function logout(){currentUser=null;document.getElementById("appShell").classList.add("hidden");document.getElementById("authScreen").classList.remove("hidden");document.getElementById("authEmail").value="";document.getElementById("authPassword").value="";setAuthMode("login")}
+function logout(){
+  currentUser=null;
+  document.getElementById("appShell").classList.add("hidden");
+  document.getElementById("authScreen").classList.remove("hidden");
+  selectRole("citizen");
+}
 
 function go(page){
  if(["integrations","workflows","analytics","audit","team"].includes(page)&&!isAdmin()){toast("This workspace is restricted to platform administrators.");return}
@@ -674,4 +731,4 @@ if (window.innerWidth > 790) {
   sidebar.classList.add("collapsed");
 }
 
-setAuthMode("login");
+selectRole("citizen");
