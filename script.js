@@ -503,15 +503,41 @@ function closeModal(){document.getElementById("modalRoot").innerHTML=""}
 function openApply(serviceId=""){
  const service=state.services.find(s=>s.id===serviceId&&s.active)||state.services.find(s=>s.active);
  const opts=state.services.filter(s=>s.active).map(s=>`<option value="${esc(s.id)}" ${s.id===service?.id?"selected":""}>${esc(s.name)} — ${esc(s.department)}</option>`).join("");
+ 
+ // Check Identity Verification Consent status
+ const hasConsent = !!state.consents.identity;
+ const prefilledName = hasConsent ? (currentUser?.name || "") : "";
+ const prefilledEmail = hasConsent ? (currentUser?.email || "") : "";
+
  openModal("Start a Service Request",`<p class="muted" style="font-size:10px;line-height:1.5;margin-top:0">Submit once. Your saved profile details will be securely shared with authorized departments based on your consent.</p>
  <form id="appForm"><div class="form-grid">
  <div class="field full"><label>Government Service *</label><select id="serviceSelect" required>${opts}</select></div>
- <div class="field"><label>Applicant Name *</label><input id="appName" required value="${esc(currentUser.name)}"></div>
+ <div class="field"><label>Applicant Name *</label><input id="appName" required value="${esc(prefilledName)}" placeholder="Enter your full name"></div>
  <div class="field"><label>Mobile Number *</label><input id="appPhone" required type="tel" pattern="[0-9+() -]{8,18}" placeholder="+91 98765 43210"></div>
- <div class="field full"><label>Email Address *</label><input id="appEmail" type="email" required value="${esc(currentUser.email)}"></div>
+ <div class="field full"><label>Email Address *</label><input id="appEmail" type="email" required value="${esc(prefilledEmail)}" placeholder="you@example.com"></div>
  <div class="field full"><label>Additional Information</label><textarea id="appNote" placeholder="Include relevant service context."></textarea></div>
- <div class="field full"><label class="checkbox-line"><input id="appConsent" type="checkbox" required> I authorize Setu to fetch my saved profile details and share them with the relevant department for processing.</label></div>
- </div></form>`,`<button class="btn" data-action="close-modal">Cancel</button><button class="btn btn-primary" data-action="submit-application">Submit Request -></button>`)
+ <div class="field full"><label class="checkbox-line"><input id="appConsent" type="checkbox" ${hasConsent ? "checked" : ""}> I AUTHORIZE SETU TO FETCH MY SAVED PROFILE DETAILS AND SHARE THEM WITH THE RELEVANT DEPARTMENT FOR PROCESSING.</label></div>
+ </div></form>`,`<button class="btn" data-action="close-modal">Cancel</button><button class="btn btn-primary" data-action="submit-application">Submit Request -></button>`);
+
+ // Dynamic pre-fill toggle listener inside the modal
+ setTimeout(() => {
+   const consentBox = document.getElementById("appConsent");
+   if (consentBox) {
+     consentBox.addEventListener("change", (e) => {
+       const appName = document.getElementById("appName");
+       const appEmail = document.getElementById("appEmail");
+       if (e.target.checked) {
+         appName.value = currentUser?.name || "";
+         appEmail.value = currentUser?.email || "";
+         toast("Saved profile data pre-filled.");
+       } else {
+         appName.value = "";
+         appEmail.value = "";
+         toast("Data pre-fill cleared. Please enter details manually.");
+       }
+     });
+   }
+ }, 50);
 }
 
 function showApplication(id){
@@ -677,7 +703,10 @@ document.addEventListener("change",e=>{
   i.status=el.checked;i.latency=i.status?156:0;logAudit(i.status?"Enabled connector":"Paused connector",i.name);save();render();toast(i.name+(i.status?" connected.":" paused."))
  }
  if(el.matches('[data-action="toggle-consent"]')){
-  state.consents[el.dataset.id]=el.checked;logAudit(el.checked?"Granted sharing permission":"Revoked sharing permission",el.dataset.id);save();toast("Privacy preference updated.")
+  state.consents[el.dataset.id]=el.checked;
+  logAudit(el.checked?"Granted sharing permission":"Revoked sharing permission",el.dataset.id);
+  save();
+  toast(el.checked ? "Consent enabled: Information will auto pre-fill." : "Consent disabled: Auto pre-fill turned off.");
  }
  if(el.id==="statusFilter"){
   const apps=visibleApps().filter(a=>!el.value||a.status===el.value);
