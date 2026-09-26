@@ -1,4 +1,4 @@
-const KEY = "setu-gov-v7";
+const KEY = "setu-gov-v8";
 
 const defaultUsers = [
   { id: "u-admin", name: "Platform Admin", email: "admin@setu.gov.in", password: "Setu@2026", role: "admin", department: "Government of Maharashtra" },
@@ -8,16 +8,24 @@ const defaultUsers = [
 
 const defaultUserProfiles = {
   "citizen@example.com": {
-    fatherName: "Suryakant Patil", dob: "2002-05-14", gender: "Male", maritalStatus: "Unmarried", religion: "Hindu", category: "General",
+    fatherName: "Suryakant Patil", motherName: "Sunita Patil", dob: "2002-05-14", gender: "Male", maritalStatus: "Unmarried", religion: "Hindu", category: "General",
     phone: "+91 98765 43210", email: "citizen@example.com",
     aadhaarNo: "4821 9901 8823", panNo: "ABCDE1234F", voterId: "MH/04/012/981242",
-    addressLine1: "42, Green Enclave, Shivaji Nagar", state: "Maharashtra", district: "Pune", taluka: "Haveli", pincode: "411005",
+    addressLine1: "42, Green Enclave, Shivaji Nagar", state: "Maharashtra", district: "Pune", taluka: "Haveli", pincode: "411005", village: "Shivaji Nagar",
     cAddressLine1: "42, Green Enclave, Shivaji Nagar", cState: "Maharashtra", cDistrict: "Pune", cTaluka: "Haveli", cPincode: "411005",
     domicileCert: "Yes", domicileNo: "DOM-2025-8821", annualIncome: "120000", incomeCertNo: "INC-2025-9921", landRecordNo: "7/12-HAV-9921",
     bankAccount: "5010029812411", bankName: "HDFC Bank", ifscCode: "HDFC0000142",
     casteCertNo: "", rationCardNo: "RC-MH-981242", rationType: "Saffron (APL)", isHandicapped: "No", udidNo: "",
     parentOccupation: "Farmer", employmentStatus: "Student", qualification: "Undergraduate",
-    courseName: "B.Tech Computer Engineering", collegeName: "AISSMS IOIT Pune", isHosteller: "No"
+    courseName: "B.Tech Computer Engineering", collegeName: "AISSMS IOIT Pune", isHosteller: "No",
+    vaultDocuments: {
+      aadhaarDoc: "Aadhaar_Card_Verified.pdf",
+      panDoc: "PAN_Card_Verified.pdf",
+      addressDoc: "Electricity_Bill_Address.pdf",
+      photoDoc: "Applicant_Photo.jpg",
+      passbookDoc: "Bank_Passbook_Copy.pdf",
+      rationDoc: "Ration_Card_Family.pdf"
+    }
   }
 };
 
@@ -40,11 +48,11 @@ const defaultState = {
   users: defaultUsers,
   userProfiles: defaultUserProfiles,
   applications: [
-    { id: "SET-2026-1048", service: "Income Certificate", department: "Revenue Department", applicant: "Aarav Patil", email: "citizen@example.com", date: "2026-03-14", status: "Approved", step: "Completed", note: "Verified against revenue digital records.", history: ["Application received", "Identity check completed", "Department verification completed", "Approved"] },
-    { id: "SET-2026-1047", service: "Student Scholarship", department: "Education Department", applicant: "Sana Shaikh", email: "sana@example.com", date: "2026-03-13", status: "Information requested", step: "Document validation", note: "Please provide current academic year enrollment proof.", history: ["Application received", "Document validation", "Additional information requested"] },
-    { id: "SET-2026-1046", service: "Business Registration", department: "Industries Department", applicant: "Meera Joshi", email: "meera@example.com", date: "2026-03-12", status: "Approved", step: "Completed", note: "Registration issued.", history: ["Application received", "Department verification", "Approved"] },
-    { id: "SET-2026-1045", service: "Birth Certificate", department: "Municipal Services", applicant: "Rohan Deshmukh", email: "rohan@example.com", date: "2026-03-11", status: "Submitted", step: "Application received", note: "", history: ["Application received"] },
-    { id: "SET-2026-1044", service: "Senior Citizen Pension", department: "Social Justice Department", applicant: "Leela Kulkarni", email: "leela@example.com", date: "2026-03-10", status: "In review", step: "Eligibility check", note: "", history: ["Application received", "Eligibility check in progress"] }
+    { id: "SET-2026-1048", service: "Income Certificate", department: "Revenue Department", applicant: "Aarav Patil", email: "citizen@example.com", date: "2026-03-14", status: "Approved", step: "Completed", note: "Verified against revenue digital records.", serviceDetails: { occupation: "Agriculture & Service", incomeSource: "Salaried & Farm Income", annualIncome: "120000" }, history: ["Application received", "Identity check completed", "Department verification completed", "Approved"] },
+    { id: "SET-2026-1047", service: "Student Scholarship", department: "Education Department", applicant: "Sana Shaikh", email: "sana@example.com", date: "2026-03-13", status: "Information requested", step: "Document validation", note: "Please provide current academic year enrollment proof.", serviceDetails: { collegeName: "COEP Pune", courseName: "B.Tech Computer Science", semester: "Semester 6", marks: "88.5%" }, history: ["Application received", "Document validation", "Additional information requested"] },
+    { id: "SET-2026-1046", service: "Business Registration", department: "Industries Department", applicant: "Meera Joshi", email: "meera@example.com", date: "2026-03-12", status: "Approved", step: "Completed", note: "Registration issued.", serviceDetails: { businessName: "Joshi IT Solutions Pvt Ltd", businessType: "Private Limited", investment: "500000" }, history: ["Application received", "Department verification", "Approved"] },
+    { id: "SET-2026-1045", service: "Birth Certificate", department: "Municipal Services", applicant: "Rohan Deshmukh", email: "rohan@example.com", date: "2026-03-11", status: "Submitted", step: "Application received", note: "", serviceDetails: { childName: "Advait Deshmukh", birthPlace: "Sahyadri Hospital Pune", birthDate: "2026-02-10" }, history: ["Application received"] },
+    { id: "SET-2026-1044", service: "Senior Citizen Pension", department: "Social Justice Department", applicant: "Leela Kulkarni", email: "leela@example.com", date: "2026-03-10", status: "In review", step: "Eligibility check", note: "", serviceDetails: { pensionType: "Indira Gandhi National Old Age Pension", spouseStatus: "Widowed" }, history: ["Application received", "Eligibility check in progress"] }
   ],
   services: defaultServices,
   integrations: [
@@ -119,14 +127,13 @@ function visibleApps() {
 function getUserProfile(userEmail) {
   const email = (userEmail || currentUser?.email || "").toLowerCase();
   if (!state.userProfiles[email]) {
-    const name = currentUser?.email.toLowerCase() === email ? currentUser.name : email.split("@")[0];
     state.userProfiles[email] = {
-      fatherName: "", dob: "", gender: "Male", maritalStatus: "Unmarried", religion: "", category: "General",
+      fatherName: "", motherName: "", dob: "", gender: "Male", maritalStatus: "Unmarried", religion: "", category: "General",
       phone: "+91 98765 43210", email: email,
       aadhaarNo: "4821 " + Math.floor(1000 + Math.random() * 9000) + " " + Math.floor(1000 + Math.random() * 9000),
       panNo: "ABCPE" + Math.floor(1000 + Math.random() * 9000) + "K",
       voterId: "MH/04/012/" + Math.floor(100000 + Math.random() * 900000),
-      addressLine1: "101, Civil Lines", state: "Maharashtra", district: "Pune", taluka: "Haveli", pincode: "411001",
+      addressLine1: "101, Civil Lines", state: "Maharashtra", district: "Pune", taluka: "Haveli", pincode: "411001", village: "Shivaji Nagar",
       cAddressLine1: "101, Civil Lines", cState: "Maharashtra", cDistrict: "Pune", cTaluka: "Haveli", cPincode: "411001",
       domicileCert: "Yes", domicileNo: "DOM-2026-" + Math.floor(1000 + Math.random() * 9000),
       annualIncome: "150000", incomeCertNo: "INC-2026-" + Math.floor(1000 + Math.random() * 9000),
@@ -134,7 +141,15 @@ function getUserProfile(userEmail) {
       bankAccount: "50100" + Math.floor(10000000 + Math.random() * 90000000), bankName: "State Bank of India", ifscCode: "SBIN0000300",
       casteCertNo: "", rationCardNo: "RC-MH-" + Math.floor(100000 + Math.random() * 900000), rationType: "Saffron (APL)",
       isHandicapped: "No", udidNo: "", parentOccupation: "Service", employmentStatus: "Employed", qualification: "Graduate",
-      courseName: "B.Sc Computer Science", collegeName: "Pune University", isHosteller: "No"
+      courseName: "B.Sc Computer Science", collegeName: "Pune University", isHosteller: "No",
+      vaultDocuments: {
+        aadhaarDoc: "Aadhaar_Card_Verified.pdf",
+        panDoc: "PAN_Card_Verified.pdf",
+        addressDoc: "Electricity_Bill_Address.pdf",
+        photoDoc: "Applicant_Photo.jpg",
+        passbookDoc: "Bank_Passbook_Copy.pdf",
+        rationDoc: "Ration_Card_Family.pdf"
+      }
     };
   }
   return state.userProfiles[email];
@@ -279,7 +294,7 @@ document.getElementById("authForm").addEventListener("submit", e => {
         department: role === "reviewer" ? selectedDept : role === "admin" ? "Government of Maharashtra" : ""
       };
       state.users.push(user);
-      getUserProfile(user.email); // initialize profile
+      getUserProfile(user.email);
       save();
       toast("Account created successfully!");
     }
@@ -321,7 +336,6 @@ function login(user) {
   document.getElementById("profileRole").textContent = roleName(user.role) + (user.department ? " · " + user.department : "");
   document.getElementById("profileAvatar").textContent = user.name.split(/\s+/).map(x => x[0]).slice(0, 2).join("").toUpperCase();
 
-  // Role visibility control
   const isUserCitizen = isCitizen();
   const isUserAdmin = isAdmin();
 
@@ -458,7 +472,7 @@ function dashboard() {
   </div>
   <div class="panel">
     <div class="panel-head">
-      <div><h2 class="panel-title">Live Citizen Vault Summary</h2><div class="panel-subtitle">Government verified details linked to your account</div></div>
+      <div><h2 class="panel-title">Live Citizen Vault Summary</h2><div class="panel-subtitle">Government verified details & document attachments</div></div>
       <button class="link-btn" data-page="profile">Manage Vault -></button>
     </div>
     <div class="health-row">
@@ -475,37 +489,54 @@ function dashboard() {
  </div>` : ""}`;
 }
 
-/* Expanded Applicant Profile & Data Vault - Live Data & All Government Dept Fields */
+/* Expanded Applicant Profile & Data Vault - Matching Reference Blueprint */
 function profilePage() {
   if (!isCitizen()) return "";
   const p = getUserProfile(currentUser.email);
+  const docs = p.vaultDocuments || {};
 
-  return `${heading("Applicant Profile & Data Vault", `Comprehensive e-Governance Vault for ${esc(currentUser.name)}. Authorized departments fetch these verified details upon your explicit application consent.`, `<button class="btn btn-primary" data-action="save-profile-details">Save Profile Vault Changes</button>`)}
+  return `${heading("Applicant Profile & Data Vault", `Reusable Citizen Data & Document Vault for ${esc(currentUser.name)}. Authorized departments fetch these verified details upon your explicit application consent.`, `<button class="btn btn-primary" data-action="save-profile-details">Save Profile Vault Changes</button>`)}
  <div class="notice">
-   <b>Dynamic Live Vault (Interoperability Protocol):</b> Stored securely under account <code>${esc(currentUser.email)}</code>. Authorized government department portals (Revenue, Education, Social Justice, UIDAI, Municipal) pull these details directly during processing when consent is granted.
+   <b>Interoperability Protocol Blueprint:</b> Store common information once, apply consent-based sharing, and allow each department to request only the additional service-specific details/documents required for its workflow.
  </div>
  <div class="accordion" id="profileAccordion">
 
-  <!-- 1. Personal Identity Vault -->
+  <!-- 1. Common Citizen Data (Identity & Family) -->
   <div class="accordion-item open">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>1. Personal Identity Details</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>1. Common Citizen Data (Identity & Family)</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
     <div class="form-grid">
      <div class="field"><label>Full Applicant Name *</label><input id="p_name" value="${esc(currentUser?.name || "")}"></div>
      <div class="field"><label>Email Address (Account ID) *</label><input id="p_email" readonly style="background:#f1f5f9;" value="${esc(currentUser?.email || "")}"></div>
-     <div class="field"><label>Father's / Guardian's Name</label><input id="p_father" value="${esc(p.fatherName || "")}"></div>
-     <div class="field"><label>Date of Birth</label><input id="p_dob" type="date" value="${esc(p.dob || "")}"></div>
+     <div class="field"><label>Father's Name</label><input id="p_father" value="${esc(p.fatherName || "")}"></div>
+     <div class="field"><label>Mother's Name</label><input id="p_mother" value="${esc(p.motherName || "")}"></div>
+     <div class="field"><label>Date of Birth / Age</label><input id="p_dob" type="date" value="${esc(p.dob || "")}"></div>
      <div class="field"><label>Gender</label><select id="p_gender"><option ${p.gender === "Male" ? "selected" : ""}>Male</option><option ${p.gender === "Female" ? "selected" : ""}>Female</option><option ${p.gender === "Other" ? "selected" : ""}>Other</option></select></div>
-     <div class="field"><label>Marital Status</label><select id="p_marital"><option ${p.maritalStatus === "Unmarried" ? "selected" : ""}>Unmarried</option><option ${p.maritalStatus === "Married" ? "selected" : ""}>Married</option></select></div>
-     <div class="field"><label>Religion</label><input id="p_religion" value="${esc(p.religion || "")}"></div>
-     <div class="field"><label>Contact Mobile Number *</label><input id="p_phone" value="${esc(p.phone || "+91 98765 43210")}"></div>
+     <div class="field"><label>Marital Status</label><select id="p_marital"><option ${p.maritalStatus === "Unmarried" ? "selected" : ""}>Unmarried</option><option ${p.maritalStatus === "Married" ? "selected" : ""}>Married</option><option ${p.maritalStatus === "Widowed" ? "selected" : ""}>Widowed</option></select></div>
+     <div class="field"><label>Mobile Number (OTP Verified) *</label><input id="p_phone" value="${esc(p.phone || "+91 98765 43210")}"></div>
     </div>
    </div>
   </div>
 
-  <!-- 2. Government Identity & Tax Vault (UIDAI & Income Tax) -->
+  <!-- 2. Common Verified Document Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>2. Government Identity & Tax Verification (UIDAI / IT Dept)</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>2. Reusable Document Vault (Digital Attachments)</span><span class="accordion-icon">+</span></button>
+   <div class="accordion-content">
+    <p class="muted" style="font-size:11px;margin-top:0">Documents uploaded here are automatically attached to government service requests when consent is granted.</p>
+    <div class="form-grid">
+     <div class="field"><label>Aadhaar Card (Identity Proof)</label><input value="${esc(docs.aadhaarDoc || "Aadhaar_Card_Verified.pdf")}" readonly style="background:#f8fafc"></div>
+     <div class="field"><label>PAN Card (Tax Proof)</label><input value="${esc(docs.panDoc || "PAN_Card_Verified.pdf")}" readonly style="background:#f8fafc"></div>
+     <div class="field"><label>Address Proof (Electricity Bill / Ration Card)</label><input value="${esc(docs.addressDoc || "Electricity_Bill_Address.pdf")}" readonly style="background:#f8fafc"></div>
+     <div class="field"><label>Passport Photograph & Signature</label><input value="${esc(docs.photoDoc || "Applicant_Photo.jpg")}" readonly style="background:#f8fafc"></div>
+     <div class="field"><label>Bank Passbook Copy</label><input value="${esc(docs.passbookDoc || "Bank_Passbook_Copy.pdf")}" readonly style="background:#f8fafc"></div>
+     <div class="field"><label>Ration Card Copy</label><input value="${esc(docs.rationDoc || "Ration_Card_Family.pdf")}" readonly style="background:#f8fafc"></div>
+    </div>
+   </div>
+  </div>
+
+  <!-- 3. Government Identity & UID Vault -->
+  <div class="accordion-item">
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>3. Government Identity & Tax Verification (UIDAI / IT Dept)</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
     <div class="form-grid">
      <div class="field"><label>Aadhaar Number (12-Digit UID)</label><input id="p_aadhaar" value="${esc(p.aadhaarNo || "")}" placeholder="e.g. 4821 9901 8823"></div>
@@ -515,23 +546,24 @@ function profilePage() {
    </div>
   </div>
 
-  <!-- 3. Address & Geographical Location Vault -->
+  <!-- 4. Location & Address Details -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>3. Permanent & Correspondence Address Details</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>4. Permanent & Correspondence Address</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
     <div class="form-grid">
      <div class="field full"><label>Permanent Address Line 1</label><input id="p_addr" value="${esc(p.addressLine1 || "")}"></div>
      <div class="field"><label>State</label><input id="p_state" value="${esc(p.state || "Maharashtra")}"></div>
      <div class="field"><label>District</label><input id="p_district" value="${esc(p.district || "Pune")}"></div>
      <div class="field"><label>Taluka / Tehsil</label><input id="p_taluka" value="${esc(p.taluka || "")}"></div>
+     <div class="field"><label>Village / City</label><input id="p_village" value="${esc(p.village || "Shivaji Nagar")}"></div>
      <div class="field"><label>Pincode</label><input id="p_pincode" value="${esc(p.pincode || "")}"></div>
     </div>
    </div>
   </div>
 
-  <!-- 4. Income, Land & Domicile Vault (Revenue Dept) -->
+  <!-- 5. Income, Land & Revenue Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>4. Income, Domicile & Land Records (MahaRevenue)</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>5. Income, Domicile & Land Records (MahaRevenue)</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
     <div class="form-grid">
      <div class="field"><label>Are you a Domicile of Maharashtra?</label><select id="p_domicile"><option ${p.domicileCert === "Yes" ? "selected" : ""}>Yes</option><option ${p.domicileCert === "No" ? "selected" : ""}>No</option></select></div>
@@ -543,9 +575,9 @@ function profilePage() {
    </div>
   </div>
 
-  <!-- 5. Direct Benefit Transfer (DBT) Bank Account Vault -->
+  <!-- 6. Direct Benefit Transfer (DBT) Bank Account Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>5. Direct Benefit Transfer (DBT) Bank Details</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>6. Direct Benefit Transfer (DBT) Bank Details</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
     <div class="form-grid">
      <div class="field"><label>Bank Account Number</label><input id="p_bank_acc" value="${esc(p.bankAccount || "")}" placeholder="Account Number"></div>
@@ -555,9 +587,9 @@ function profilePage() {
    </div>
   </div>
 
-  <!-- 6. Ration, Social Inclusion & Caste Details -->
+  <!-- 7. Social Category, Ration & Inclusion Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>6. Social Category, Ration & Inclusion Vault</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>7. Social Category, Ration & Inclusion Vault</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
     <div class="form-grid">
      <div class="field"><label>Category</label><select id="p_cat"><option ${p.category === "General" ? "selected" : ""}>General</option><option ${p.category === "OBC" ? "selected" : ""}>OBC</option><option ${p.category === "SC" ? "selected" : ""}>SC</option><option ${p.category === "ST" ? "selected" : ""}>ST</option><option ${p.category === "EWS" ? "selected" : ""}>EWS</option></select></div>
@@ -570,9 +602,9 @@ function profilePage() {
    </div>
   </div>
 
-  <!-- 7. Educational & Employment Vault -->
+  <!-- 8. Educational & Employment Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>7. Educational Qualifications & Employment Vault</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>8. Educational Qualifications & Employment Vault</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
     <div class="form-grid">
      <div class="field"><label>Highest Qualification</label><input id="p_qual" value="${esc(p.qualification || "")}"></div>
@@ -591,7 +623,7 @@ function toggleAccordion(btn) {
   item.classList.toggle("open");
 }
 
-/* Save profile data dynamically to current logged in user's profile */
+/* Save profile data dynamically */
 function saveProfileDataFromUI() {
   const email = currentUser.email.toLowerCase();
   const nameInput = document.getElementById("p_name")?.value.trim();
@@ -601,13 +633,14 @@ function saveProfileDataFromUI() {
     document.getElementById("profileName").textContent = currentUser.name;
     document.getElementById("profileAvatar").textContent = currentUser.name.split(/\s+/).map(x => x[0]).slice(0, 2).join("").toUpperCase();
 
-    // Sync state users
     const matchedUser = state.users.find(u => u.email.toLowerCase() === email);
     if (matchedUser) matchedUser.name = currentUser.name;
   }
 
   state.userProfiles[email] = {
+    ...getUserProfile(email),
     fatherName: document.getElementById("p_father")?.value || "",
+    motherName: document.getElementById("p_mother")?.value || "",
     dob: document.getElementById("p_dob")?.value || "",
     gender: document.getElementById("p_gender")?.value || "Male",
     maritalStatus: document.getElementById("p_marital")?.value || "Unmarried",
@@ -622,6 +655,7 @@ function saveProfileDataFromUI() {
     state: document.getElementById("p_state")?.value || "Maharashtra",
     district: document.getElementById("p_district")?.value || "Pune",
     taluka: document.getElementById("p_taluka")?.value || "",
+    village: document.getElementById("p_village")?.value || "",
     pincode: document.getElementById("p_pincode")?.value || "",
     domicileCert: document.getElementById("p_domicile")?.value || "Yes",
     domicileNo: document.getElementById("p_dom_no")?.value || "",
@@ -744,71 +778,143 @@ function openModal(title, body, foot = "") {
 }
 function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
 
-/* Start Application Modal - Consent pre-fill logic with live vault data */
+/* Dynamic Service-Specific Input Fields generator matching reference blueprint */
+function renderServiceSpecificFields(serviceId, profile, hasConsent) {
+  switch (serviceId) {
+    case "income":
+      return `
+     <div class="field"><label>Occupation *</label><input id="app_occ" value="${esc(hasConsent ? profile.parentOccupation || "Service & Agriculture" : "")}" placeholder="e.g. Salaried / Farmer / Business"></div>
+     <div class="field"><label>Income Source *</label><input id="app_inc_source" value="${esc(hasConsent ? "Salary & Agriculture" : "")}" placeholder="e.g. Salary, Agriculture, Rent"></div>
+     <div class="field full"><label>Annual Family Income (Rs.) *</label><input id="app_inc_amt" value="${esc(hasConsent ? profile.annualIncome || "150000" : "")}" placeholder="e.g. 150000"></div>`;
+    case "scholarship":
+      return `
+     <div class="field"><label>College / Institution Name *</label><input id="app_college" value="${esc(hasConsent ? profile.collegeName || "AISSMS IOIT Pune" : "")}" placeholder="e.g. COEP Pune"></div>
+     <div class="field"><label>Course Name *</label><input id="app_course" value="${esc(hasConsent ? profile.courseName || "B.Tech Computer Engineering" : "")}" placeholder="e.g. B.Tech Computer Science"></div>
+     <div class="field"><label>Year / Semester *</label><input id="app_sem" value="Semester 6" placeholder="e.g. 3rd Year / Sem 6"></div>
+     <div class="field"><label>Previous Marksheet Percentage *</label><input id="app_marks" value="88.5%" placeholder="e.g. 88.5%"></div>`;
+    case "business":
+      return `
+     <div class="field"><label>Business / Company Name *</label><input id="app_biz_name" placeholder="e.g. Apex Tech Solutions Pvt Ltd"></div>
+     <div class="field"><label>Business Type *</label><select id="app_biz_type"><option>Private Limited</option><option>Partnership</option><option>Proprietorship</option><option>LLP</option></select></div>
+     <div class="field"><label>Investment Amount (Rs.) *</label><input id="app_biz_inv" placeholder="e.g. 500000"></div>
+     <div class="field"><label>Number of Employees *</label><input id="app_biz_emp" placeholder="e.g. 12"></div>`;
+    case "birth":
+      return `
+     <div class="field"><label>Child's Full Name *</label><input id="app_child_name" placeholder="Enter child's full name"></div>
+     <div class="field"><label>Date & Time of Birth *</label><input id="app_child_dob" type="datetime-local"></div>
+     <div class="field full"><label>Place of Birth / Hospital Name *</label><input id="app_hospital" placeholder="e.g. Sahyadri Hospital, Pune"></div>`;
+    case "pension":
+      return `
+     <div class="field"><label>Pension Scheme Type *</label><select id="app_pension_type"><option>Indira Gandhi National Old Age Pension</option><option>State Senior Citizen Support</option></select></div>
+     <div class="field"><label>Spouse Status *</label><select id="app_spouse_status"><option>Married</option><option>Widowed</option><option>Single</option></select></div>`;
+    case "residence":
+      return `
+     <div class="field"><label>Duration of Residence (Years) *</label><input id="app_res_years" value="15" placeholder="e.g. 15 Years"></div>
+     <div class="field"><label>Purpose of Certificate *</label><input id="app_res_purpose" value="Education & Employment" placeholder="e.g. Passport / Education"></div>`;
+    case "caste":
+      return `
+     <div class="field"><label>Caste *</label><input id="app_caste" placeholder="e.g. Maratha / Kunbi / Mahars"></div>
+     <div class="field"><label>Sub-Caste *</label><input id="app_subcaste" placeholder="Sub-caste details"></div>
+     <div class="field full"><label>Ancestral District *</label><input id="app_caste_dist" value="${esc(hasConsent ? profile.district || "Pune" : "")}"></div>`;
+    case "trade":
+      return `
+     <div class="field"><label>Business Premises Name *</label><input id="app_trade_name" placeholder="e.g. Green Leaf Organics"></div>
+     <div class="field"><label>Premises Area (Sq. Ft.) *</label><input id="app_trade_area" placeholder="e.g. 450 sq ft"></div>
+     <div class="field"><label>Premises Ownership *</label><select id="app_trade_ownership"><option>Owned</option><option>Rented / Rented with Owner NOC</option></select></div>
+     <div class="field"><label>Shop Registration No</label><input id="app_shop_reg" placeholder="Optional Shop Act No"></div>`;
+    case "water":
+      return `
+     <div class="field"><label>Property / Plot Number *</label><input id="app_water_plot" placeholder="e.g. Plot No 42, Sector 4"></div>
+     <div class="field"><label>Connection Type *</label><select id="app_water_type"><option>Residential</option><option>Commercial</option></select></div>
+     <div class="field full"><label>Required Pipe Size (Inches) *</label><select id="app_water_pipe"><option>0.5 Inch (Standard Domestic)</option><option>0.75 Inch</option><option>1.0 Inch (Commercial)</option></select></div>`;
+    case "ration":
+      return `
+     <div class="field"><label>Existing Ration Card Number *</label><input id="app_ration_no" value="${esc(hasConsent ? profile.rationCardNo || "RC-MH-981242" : "")}"></div>
+     <div class="field"><label>Ration Card Category *</label><select id="app_ration_cat"><option ${profile.rationType?.includes("Saffron") ? "selected" : ""}>Saffron (APL)</option><option ${profile.rationType?.includes("Yellow") ? "selected" : ""}>Yellow (BPL)</option></select></div>
+     <div class="field full"><label>Head of Family Name *</label><input id="app_head_family" value="${esc(hasConsent ? profile.fatherName || currentUser.name : "")}"></div>`;
+    case "driving":
+      return `
+     <div class="field"><label>Driving Licence Number *</label><input id="app_dl_no" placeholder="e.g. MH-12-20210098124"></div>
+     <div class="field"><label>Issuing RTO Office *</label><input id="app_rto_source" value="MH-12 Pune RTO"></div>
+     <div class="field full"><label>Destination RTO / State for Transfer *</label><input id="app_rto_dest" placeholder="e.g. MH-02 Mumbai West / Karnataka"></div>`;
+    case "property":
+      return `
+     <div class="field"><label>Property ID / Assessment Number *</label><input id="app_prop_id" placeholder="e.g. PMC-PROP-99214"></div>
+     <div class="field"><label>Ward Number *</label><input id="app_ward_no" value="Ward 14"></div>
+     <div class="field full"><label>Property Type *</label><select id="app_prop_type"><option>Residential Apartment</option><option>Commercial Shop</option><option>Plot / Open Land</option></select></div>`;
+    default:
+      return `<div class="field full"><label>Additional Request Details</label><input placeholder="Provide context"></div>`;
+  }
+}
+
+/* Start Application Modal - Implementation matching 12-Service Blueprint */
 function openApply(serviceId = "") {
   const service = state.services.find(s => s.id === serviceId && s.active) || state.services.find(s => s.active);
   const opts = state.services.filter(s => s.active).map(s => `<option value="${esc(s.id)}" ${s.id === service?.id ? "selected" : ""}>${esc(s.name)} — ${esc(s.department)}</option>`).join("");
 
   const hasConsent = !!state.consents.identity;
   const profile = getUserProfile(currentUser?.email);
+  const docs = profile.vaultDocuments || {};
 
-  // Live prefill if consent is ON
   const prefilledName = hasConsent ? (currentUser?.name || "") : "";
   const prefilledEmail = hasConsent ? (currentUser?.email || "") : "";
   const prefilledPhone = hasConsent ? (profile.phone || "+91 98765 43210") : "";
   const prefilledAadhaar = hasConsent ? (profile.aadhaarNo || "") : "";
 
-  openModal("Start a Government Service Request", `
+  openModal(`Start Service Request — ${esc(service.name)}`, `
  <p class="muted" style="font-size:11px;line-height:1.5;margin-top:0">
-   ${hasConsent ? "Consent Enabled: Your live saved profile vault details are auto-filled below." : "Consent Disabled: Information must be entered manually."}
+   ${hasConsent ? "<b>Interoperability Protocol Active:</b> Common citizen data & verified vault documents are auto-reused below." : "Consent Disabled: Common citizen details must be typed manually."}
  </p>
  <form id="appForm">
    <div class="form-grid">
-     <div class="field full"><label>Government Service *</label><select id="serviceSelect" required>${opts}</select></div>
-     <div class="field"><label>Applicant Name *</label><input id="appName" required value="${esc(prefilledName)}" placeholder="Enter your full name"></div>
-     <div class="field"><label>Mobile Number *</label><input id="appPhone" required type="tel" value="${esc(prefilledPhone)}" placeholder="+91 98765 43210"></div>
-     <div class="field"><label>Email Address *</label><input id="appEmail" type="email" required value="${esc(prefilledEmail)}" placeholder="you@example.com"></div>
-     <div class="field"><label>Aadhaar / UID Reference</label><input id="appAadhaar" value="${esc(prefilledAadhaar)}" placeholder="e.g. 4821 9901 8823"></div>
-     <div class="field full"><label>Additional Service Details / Context</label><textarea id="appNote" placeholder="Provide any relevant context for the processing department."></textarea></div>
+     <div class="field full"><label>Target Government Service *</label><select id="serviceSelect" onchange="updateServiceModalFields(this.value)" required>${opts}</select></div>
+     
+     <div style="grid-column:1/-1;background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:8px;margin-bottom:10px">
+       <div style="font-size:10px;font-weight:800;color:#0f172a;margin-bottom:6px">1. REUSED COMMON CITIZEN DATA (FROM VAULT)</div>
+       <div class="form-grid">
+         <div class="field"><label>Applicant Name *</label><input id="appName" required value="${esc(prefilledName)}" placeholder="Full Name"></div>
+         <div class="field"><label>Mobile Number *</label><input id="appPhone" required type="tel" value="${esc(prefilledPhone)}" placeholder="+91 98765 43210"></div>
+         <div class="field"><label>Email Address *</label><input id="appEmail" type="email" required value="${esc(prefilledEmail)}" placeholder="you@example.com"></div>
+         <div class="field"><label>Aadhaar / UID Reference</label><input id="appAadhaar" value="${esc(prefilledAadhaar)}" placeholder="12-digit UID"></div>
+       </div>
+       <div style="font-size:9px;color:#64748b;margin-top:4px">
+         <b>Auto-Attached Vault Documents:</b> ${hasConsent ? `${esc(docs.aadhaarDoc || "Aadhaar.pdf")}, ${esc(docs.panDoc || "PAN.pdf")}, ${esc(docs.addressDoc || "Address_Proof.pdf")}` : "None (Consent OFF)"}
+       </div>
+     </div>
+
+     <div style="grid-column:1/-1;background:#f0fdf4;border:1px solid #bbf7d0;padding:10px;border-radius:8px;margin-bottom:10px">
+       <div style="font-size:10px;font-weight:800;color:#166534;margin-bottom:6px">2. SERVICE-SPECIFIC DATA &amp; DOCUMENTS FOR ${esc(service.department.toUpperCase())}</div>
+       <div class="form-grid" id="serviceSpecificContainer">
+         ${renderServiceSpecificFields(service.id, profile, hasConsent)}
+       </div>
+     </div>
+
      <div class="field full">
        <label class="checkbox-line">
          <input id="appConsent" type="checkbox" ${hasConsent ? "checked" : ""}>
-         I AUTHORIZE SETU TO SHARE MY SAVED LIVE PROFILE VAULT DETAILS WITH THE RELEVANT DEPARTMENT FOR THIS SERVICE REQUEST.
+         I AUTHORIZE SETU INTEROPERABILITY PROTOCOL TO SHARE MY REUSABLE VAULT DETAILS &amp; ATTACHMENTS WITH ${esc(service.department.toUpperCase())}.
        </label>
      </div>
    </div>
  </form>`,
-    `<button class="btn" data-action="close-modal">Cancel</button><button class="btn btn-primary" data-action="submit-application">Submit Request -></button>`
+    `<button class="btn" data-action="close-modal">Cancel</button><button class="btn btn-primary" data-action="submit-application">Submit Service Application -></button>`
   );
 
   setTimeout(() => {
     const consentBox = document.getElementById("appConsent");
     if (consentBox) {
       consentBox.addEventListener("change", (e) => {
-        const appName = document.getElementById("appName");
-        const appEmail = document.getElementById("appEmail");
-        const appPhone = document.getElementById("appPhone");
-        const appAadhaar = document.getElementById("appAadhaar");
-
         state.consents.identity = e.target.checked;
         save();
-
-        if (e.target.checked) {
-          appName.value = currentUser?.name || "";
-          appEmail.value = currentUser?.email || "";
-          appPhone.value = profile.phone || "+91 98765 43210";
-          appAadhaar.value = profile.aadhaarNo || "";
-          toast("Consent granted: Saved live profile vault pre-filled.");
-        } else {
-          appName.value = "";
-          appEmail.value = "";
-          appPhone.value = "";
-          appAadhaar.value = "";
-          toast("Consent revoked: Fields cleared for manual entry.");
-        }
+        openApply(document.getElementById("serviceSelect").value);
+        toast(e.target.checked ? "Consent enabled: Reused common vault data auto-filled." : "Consent disabled: Manual entry required.");
       });
     }
   }, 50);
+}
+
+function updateServiceModalFields(selectedServiceId) {
+  openApply(selectedServiceId);
 }
 
 /* Application detail modal - Shows fetched citizen vault data to Department Officers */
@@ -818,6 +924,7 @@ function showApplication(id) {
   const canAct = canReview() && (isAdmin() || app.department === currentUser.department) && !["Approved", "Rejected"].includes(app.status);
   const history = app.history || [app.step];
   const profile = getUserProfile(app.email);
+  const docs = profile.vaultDocuments || {};
 
   openModal(`Application Reference: ${esc(app.id)}`, `
  <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px">
@@ -831,18 +938,30 @@ function showApplication(id) {
    <div><small class="muted">CURRENT STEP</small><div style="font-size:11px;font-weight:750;margin-top:2px">${esc(app.step)}</div></div>
  </div>
 
- <!-- Fetched Department Data Vault Section -->
+ <!-- Fetched Department Data Vault Section (Common Data & Documents) -->
  <div style="margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:8px">
-   <div style="font-size:11px;font-weight:800;color:#166534;margin-bottom:6px">Fetched Citizen Profile Vault Details (Interoperability Protocol)</div>
+   <div style="font-size:11px;font-weight:800;color:#166534;margin-bottom:6px">1. Reused Common Vault Data (Consent Verified)</div>
    <div class="grid" style="grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#14532d">
      <div><b>Aadhaar UID:</b> ${esc(profile.aadhaarNo || "Verified")}</div>
      <div><b>PAN Number:</b> ${esc(profile.panNo || "Verified")}</div>
      <div><b>Annual Income:</b> Rs. ${esc(profile.annualIncome || "150000")}</div>
-     <div><b>Income Cert No:</b> ${esc(profile.incomeCertNo || "INC-2026-9921")}</div>
-     <div><b>Domicile Cert No:</b> ${esc(profile.domicileNo || "DOM-2026-8821")}</div>
-     <div><b>Bank Account (DBT):</b> ${esc(profile.bankAccount || "Verified")} (${esc(profile.bankName || "SBI")})</div>
+     <div><b>Income Cert No:</b> ${esc(profile.incomeCertNo || "INC-2025-9921")}</div>
+     <div><b>Domicile Cert No:</b> ${esc(profile.domicileNo || "DOM-2025-8821")}</div>
+     <div><b>DBT Bank Account:</b> ${esc(profile.bankAccount || "Verified")} (${esc(profile.bankName || "SBI")})</div>
+   </div>
+   <div style="font-size:9px;color:#15803d;margin-top:6px;border-top:1px dashed #bbf7d0;padding-top:4px">
+     <b>Attached Verified Vault Docs:</b> ${esc(docs.aadhaarDoc || "Aadhaar.pdf")}, ${esc(docs.panDoc || "PAN.pdf")}, ${esc(docs.addressDoc || "Address_Proof.pdf")}
    </div>
  </div>
+
+ <!-- Submitted Service-Specific Intake Details -->
+ ${app.serviceDetails ? `
+ <div style="margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:8px">
+   <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px">2. Service-Specific Intake Details (${esc(app.department)})</div>
+   <div class="grid" style="grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#1e3a8a">
+     ${Object.entries(app.serviceDetails).map(([k, v]) => `<div><b>${esc(k.charAt(0).toUpperCase() + k.slice(1))}:</b> ${esc(v)}</div>`).join("")}
+   </div>
+ </div>` : ""}
 
  ${app.note ? `<div class="notice" style="margin:12px 0 0"><b>Latest Department Note:</b> ${esc(app.note)}</div>` : ""}
  <h3 style="font-size:12px;margin:16px 0 8px">Processing History</h3>
@@ -853,7 +972,7 @@ function showApplication(id) {
   );
 }
 
-/* View / Print Official Certificate Modal for Approved Applications */
+/* View / Print Official Certificate Modal */
 function generateCertificate(appId) {
   const app = state.applications.find(a => a.id === appId);
   if (!app) return;
@@ -972,10 +1091,22 @@ document.addEventListener("click", e => {
     const applicant = document.getElementById("appName").value.trim();
     const email = document.getElementById("appEmail").value.trim();
 
+    // Collect service-specific details
+    const serviceDetails = {};
+    const container = document.getElementById("serviceSpecificContainer");
+    if (container) {
+      container.querySelectorAll("input, select").forEach(inp => {
+        if (inp.id && inp.value) {
+          const key = inp.id.replace("app_", "");
+          serviceDetails[key] = inp.value;
+        }
+      });
+    }
+
     state.applications.unshift({
       id, service: service.name, department: service.department, applicant, email,
       date: new Date().toISOString().slice(0, 10), status: "Submitted", step: "Application received",
-      note: document.getElementById("appNote").value.trim(), history: ["Application received", "Consent recorded"]
+      serviceDetails, note: document.getElementById("appNote")?.value.trim() || "", history: ["Application received", "Consent recorded"]
     });
     logAudit("Submitted service request", id, applicant);
     save(); closeModal(); go("applications"); toast("Request submitted! Reference: " + id);
