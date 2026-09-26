@@ -1,4 +1,4 @@
-const KEY = "setu-gov-v8";
+const KEY = "setu-gov-v9";
 
 const defaultUsers = [
   { id: "u-admin", name: "Platform Admin", email: "admin@setu.gov.in", password: "Setu@2026", role: "admin", department: "Government of Maharashtra" },
@@ -489,7 +489,7 @@ function dashboard() {
  </div>` : ""}`;
 }
 
-/* Expanded Applicant Profile & Data Vault - Matching Reference Blueprint */
+/* Expanded Applicant Profile & Data Vault */
 function profilePage() {
   if (!isCitizen()) return "";
   const p = getUserProfile(currentUser.email);
@@ -784,8 +784,8 @@ function renderServiceSpecificFields(serviceId, profile, hasConsent) {
     case "income":
       return `
      <div class="field"><label>Occupation *</label><input id="app_occ" value="${esc(hasConsent ? profile.parentOccupation || "Service & Agriculture" : "")}" placeholder="e.g. Salaried / Farmer / Business"></div>
-     <div class="field"><label>Income Source *</label><input id="app_inc_source" value="${esc(hasConsent ? "Salary & Agriculture" : "")}" placeholder="e.g. Salary, Agriculture, Rent"></div>
-     <div class="field full"><label>Annual Family Income (Rs.) *</label><input id="app_inc_amt" value="${esc(hasConsent ? profile.annualIncome || "150000" : "")}" placeholder="e.g. 150000"></div>`;
+     <div class="field"><label>Income Source *</label><input id="app_inc_source" value="${esc(hasConsent ? "Salaried & Agriculture" : "")}" placeholder="e.g. Salary, Agriculture, Rent"></div>
+     <div class="field full"><label>Annual Family Income (Rs.) *</label><input id="app_inc_amt" value="${esc(hasConsent ? profile.annualIncome || "120000" : "")}" placeholder="e.g. 120000"></div>`;
     case "scholarship":
       return `
      <div class="field"><label>College / Institution Name *</label><input id="app_college" value="${esc(hasConsent ? profile.collegeName || "AISSMS IOIT Pune" : "")}" placeholder="e.g. COEP Pune"></div>
@@ -847,7 +847,7 @@ function renderServiceSpecificFields(serviceId, profile, hasConsent) {
   }
 }
 
-/* Start Application Modal - Implementation matching 12-Service Blueprint */
+/* Start Application Modal */
 function openApply(serviceId = "") {
   const service = state.services.find(s => s.id === serviceId && s.active) || state.services.find(s => s.active);
   const opts = state.services.filter(s => s.active).map(s => `<option value="${esc(s.id)}" ${s.id === service?.id ? "selected" : ""}>${esc(s.name)} — ${esc(s.department)}</option>`).join("");
@@ -944,7 +944,7 @@ function showApplication(id) {
    <div class="grid" style="grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#14532d">
      <div><b>Aadhaar UID:</b> ${esc(profile.aadhaarNo || "Verified")}</div>
      <div><b>PAN Number:</b> ${esc(profile.panNo || "Verified")}</div>
-     <div><b>Annual Income:</b> Rs. ${esc(profile.annualIncome || "150000")}</div>
+     <div><b>Annual Income:</b> Rs. ${esc(profile.annualIncome || "120000")}</div>
      <div><b>Income Cert No:</b> ${esc(profile.incomeCertNo || "INC-2025-9921")}</div>
      <div><b>Domicile Cert No:</b> ${esc(profile.domicileNo || "DOM-2025-8821")}</div>
      <div><b>DBT Bank Account:</b> ${esc(profile.bankAccount || "Verified")} (${esc(profile.bankName || "SBI")})</div>
@@ -972,22 +972,81 @@ function showApplication(id) {
   );
 }
 
-/* View / Print Official Certificate Modal */
+/* View / Print Official Certificate Modal - Fixed Certificate Spelling Repetition & Added Certified Income Amount */
 function generateCertificate(appId) {
   const app = state.applications.find(a => a.id === appId);
   if (!app) return;
   const profile = getUserProfile(app.email);
+  const serviceName = app.service.trim();
+
+  // Fix: Avoid repeating "Certificate" if service name already ends with Certificate
+  const certTitle = serviceName.toLowerCase().endsWith("certificate") ? serviceName : serviceName + " Certificate";
+
+  // Dynamic Service-Specific Certified Values (e.g. Certified Annual Income for Income Certificate)
+  let extraCertFields = "";
+  let bodyDescription = `This is to certify that <b>${esc(app.applicant)}</b> (${esc(app.email)}) has successfully fulfilled all government department verification requirements for <b>${esc(app.service)}</b> under the <b>${esc(app.department)}</b>.`;
+
+  if (serviceName.toLowerCase().includes("income")) {
+    const rawInc = app.serviceDetails?.annualIncome || app.serviceDetails?.inc_amt || profile.annualIncome || "120000";
+    const formattedInc = Number(String(rawInc).replace(/[^0-9]/g, "") || 120000).toLocaleString("en-IN");
+    bodyDescription = `This is to certify that <b>${esc(app.applicant)}</b> (${esc(app.email)}) has an Annual Family Income of <b>Rs. ${formattedInc}/-</b> from all verified sources, recorded under the <b>${esc(app.department)}</b>.`;
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Certified Annual Income:</span><span class="cert-val" style="color:var(--teal)">Rs. ${formattedInc}/-</span></div>
+     <div class="cert-field"><span class="cert-label">Income Certificate Reference:</span><span class="cert-val">${esc(profile.incomeCertNo || "INC-2025-9921")}</span></div>`;
+  } else if (serviceName.toLowerCase().includes("scholarship")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Institution / College:</span><span class="cert-val">${esc(app.serviceDetails?.college || profile.collegeName || "AISSMS IOIT Pune")}</span></div>
+     <div class="cert-field"><span class="cert-label">Course &amp; Marksheet %:</span><span class="cert-val">${esc(app.serviceDetails?.course || profile.courseName)} (${esc(app.serviceDetails?.marks || "88.5%")})</span></div>`;
+  } else if (serviceName.toLowerCase().includes("business")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Registered Business Name:</span><span class="cert-val">${esc(app.serviceDetails?.biz_name || "Joshi IT Solutions Pvt Ltd")}</span></div>
+     <div class="cert-field"><span class="cert-label">Business Structure &amp; Investment:</span><span class="cert-val">${esc(app.serviceDetails?.biz_type || "Private Limited")} (Rs. ${esc(app.serviceDetails?.biz_inv || "500,000")})</span></div>`;
+  } else if (serviceName.toLowerCase().includes("birth")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Child's Name:</span><span class="cert-val">${esc(app.serviceDetails?.child_name || "Advait Deshmukh")}</span></div>
+     <div class="cert-field"><span class="cert-label">Hospital / Birth Place:</span><span class="cert-val">${esc(app.serviceDetails?.hospital || "Sahyadri Hospital, Pune")}</span></div>`;
+  } else if (serviceName.toLowerCase().includes("pension")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Sanctioned Pension Scheme:</span><span class="cert-val">${esc(app.serviceDetails?.pension_type || "Indira Gandhi National Old Age Pension")}</span></div>
+     <div class="cert-field"><span class="cert-label">DBT Bank Account:</span><span class="cert-val">${esc(profile.bankAccount)} (${esc(profile.bankName)})</span></div>`;
+  } else if (serviceName.toLowerCase().includes("residence")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Verified Residence Duration:</span><span class="cert-val">${esc(app.serviceDetails?.res_years || "15 Years")}</span></div>
+     <div class="cert-field"><span class="cert-label">Verified Address:</span><span class="cert-val">${esc(profile.addressLine1)}, ${esc(profile.district)}</span></div>`;
+  } else if (serviceName.toLowerCase().includes("caste")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Verified Caste Category:</span><span class="cert-val">${esc(app.serviceDetails?.caste || "Maratha / OBC")} (${esc(profile.category)})</span></div>`;
+  } else if (serviceName.toLowerCase().includes("trade")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Licenced Trade Premises:</span><span class="cert-val">${esc(app.serviceDetails?.trade_name || "Green Leaf Organics")} (${esc(app.serviceDetails?.trade_area || "450 sq ft")})</span></div>`;
+  } else if (serviceName.toLowerCase().includes("water")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Property Plot &amp; Connection:</span><span class="cert-val">${esc(app.serviceDetails?.water_plot || "Plot 42")} (${esc(app.serviceDetails?.water_type || "Residential")})</span></div>`;
+  } else if (serviceName.toLowerCase().includes("ration")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Ration Card Category:</span><span class="cert-val">${esc(profile.rationType || "Saffron APL")} (Card: ${esc(profile.rationCardNo)})</span></div>`;
+  } else if (serviceName.toLowerCase().includes("driving")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Driving Licence No:</span><span class="cert-val">${esc(app.serviceDetails?.dl_no || "MH-12-20210098124")}</span></div>
+     <div class="cert-field"><span class="cert-label">Destination RTO Transfer:</span><span class="cert-val">${esc(app.serviceDetails?.rto_dest || "Transfer Approved")}</span></div>`;
+  } else if (serviceName.toLowerCase().includes("property")) {
+    extraCertFields = `
+     <div class="cert-field"><span class="cert-label">Property Assessment ID:</span><span class="cert-val">${esc(app.serviceDetails?.prop_id || "PMC-PROP-99214")}</span></div>
+     <div class="cert-field"><span class="cert-label">Tax Dues Status:</span><span class="cert-val" style="color:var(--green)">ALL DUES CLEARED</span></div>`;
+  }
+
   openModal(`Official Certificate - ${esc(app.id)}`, `
  <div class="certificate-card" id="certDocument">
    <div class="cert-header">
      <div class="cert-sub">Government of Maharashtra · Service Exchange</div>
-     <h2>${esc(app.service)} Certificate</h2>
+     <h2>${esc(certTitle.toUpperCase())}</h2>
      <div style="font-size:10px;color:var(--teal);font-weight:800">REF NO: ${esc(app.id)}</div>
    </div>
    <div class="cert-body">
-     <p>This is to certify that <b>${esc(app.applicant)}</b> (${esc(app.email)}) has successfully fulfilled all government department verification requirements for <b>${esc(app.service)}</b> under the <b>${esc(app.department)}</b>.</p>
+     <p>${bodyDescription}</p>
      <div class="cert-field"><span class="cert-label">Applicant Name:</span><span class="cert-val">${esc(app.applicant)}</span></div>
-     <div class="cert-field"><span class="cert-label">Aadhaar Reference:</span><span class="cert-val">${esc(profile.aadhaarNo || "VERIFIED")}</span></div>
+     <div class="cert-field"><span class="cert-label">Aadhaar Reference:</span><span class="cert-val">${esc(profile.aadhaarNo || "4821 9901 8823")}</span></div>
+     ${extraCertFields}
      <div class="cert-field"><span class="cert-label">Service Title:</span><span class="cert-val">${esc(app.service)}</span></div>
      <div class="cert-field"><span class="cert-label">Issuing Authority:</span><span class="cert-val">${esc(app.department)}</span></div>
      <div class="cert-field"><span class="cert-label">Application Reference:</span><span class="cert-val">${esc(app.id)}</span></div>
@@ -1091,7 +1150,6 @@ document.addEventListener("click", e => {
     const applicant = document.getElementById("appName").value.trim();
     const email = document.getElementById("appEmail").value.trim();
 
-    // Collect service-specific details
     const serviceDetails = {};
     const container = document.getElementById("serviceSpecificContainer");
     if (container) {
