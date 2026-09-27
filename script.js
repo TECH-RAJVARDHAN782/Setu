@@ -423,14 +423,14 @@ function dashboard() {
     </div>
     <div class="metric-value">${activeSystems}<span style="font-size:13px;color:#64748b"> / ${state.integrations.length}</span></div>
     <div class="metric-foot">Connected department connectors</div>
-  </div>` : `
+  </div>` : (isCitizen() && !isReviewer()) ? `
   <div class="metric">
     <div class="metric-top"><span>Directory</span>
       <div class="metric-icon"><svg class="nav-svg" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/></svg></div>
     </div>
     <div class="metric-value">${state.services.filter(s => s.active).length}</div>
     <div class="metric-foot">Single access point services</div>
-  </div>`}
+  </div>` : ``}
  </div>
 
  <div class="grid dashboard" style="grid-template-columns:1fr;">
