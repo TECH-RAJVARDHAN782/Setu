@@ -21,10 +21,20 @@ const defaultUserProfiles = {
     vaultDocuments: {
       aadhaarDoc: "Aadhaar_Card_Verified.pdf",
       panDoc: "PAN_Card_Verified.pdf",
+      voterDoc: "Voter_ID_Card.pdf",
       addressDoc: "Electricity_Bill_Address.pdf",
-      photoDoc: "Applicant_Photo.jpg",
+      photoDoc: "Applicant_Photo_ID_Proof.pdf",
+      birthDoc: "Birth_Certificate_Proof.pdf",
       passbookDoc: "Bank_Passbook_Copy.pdf",
-      rationDoc: "Ration_Card_Family.pdf"
+      rationDoc: "Ration_Card_Family.pdf",
+      domicileDoc: "Domicile_Certificate.pdf",
+      incomeDoc: "Income_Certificate_Verified.pdf",
+      landDoc: "MahaBhulekh_7_12_Extract.pdf",
+      casteDoc: "Caste_Certificate.pdf",
+      udidDoc: "UDID_Disability_Card.pdf",
+      educationDoc: "College_Marksheet_Score.pdf",
+      admissionDoc: "CAP_Round_Allotment_Letter.pdf",
+      feeReceiptDoc: "College_Fee_Receipt_Paid.pdf"
     }
   }
 };
@@ -173,10 +183,20 @@ function getUserProfile(userEmail) {
       vaultDocuments: {
         aadhaarDoc: "Aadhaar_Card_Verified.pdf",
         panDoc: "PAN_Card_Verified.pdf",
+        voterDoc: "Voter_ID_Card.pdf",
         addressDoc: "Electricity_Bill_Address.pdf",
-        photoDoc: "Applicant_Photo.jpg",
+        photoDoc: "Applicant_Photo_ID_Proof.pdf",
+        birthDoc: "Birth_Certificate_Proof.pdf",
         passbookDoc: "Bank_Passbook_Copy.pdf",
-        rationDoc: "Ration_Card_Family.pdf"
+        rationDoc: "Ration_Card_Family.pdf",
+        domicileDoc: "Domicile_Certificate.pdf",
+        incomeDoc: "Income_Certificate_Verified.pdf",
+        landDoc: "MahaBhulekh_7_12_Extract.pdf",
+        casteDoc: "Caste_Certificate.pdf",
+        udidDoc: "UDID_Disability_Card.pdf",
+        educationDoc: "College_Marksheet_Score.pdf",
+        admissionDoc: "CAP_Round_Allotment_Letter.pdf",
+        feeReceiptDoc: "College_Fee_Receipt_Paid.pdf"
       }
     };
   }
@@ -520,89 +540,283 @@ function dashboard() {
  </div>` : ""}`;
 }
 
+/* Helper to render a required field with an interactive Document (in PDF format) upload option in front of it */
+function renderFieldWithDocUpload({
+  label,
+  id,
+  value,
+  type = "text",
+  placeholder = "",
+  readonly = false,
+  required = false,
+  docKey,
+  docLabel = "Required Document (PDF)",
+  docDefault,
+  docs,
+  fullWidth = true,
+  selectOptions = null
+}) {
+  const currentDoc = (docs && docs[docKey]) || docDefault || "Document_Not_Uploaded.pdf";
+  const labelId = `doc_lbl_${docKey}`;
+  const inputId = id;
+
+  let inputHtml = "";
+  if (selectOptions) {
+    inputHtml = `<select id="${inputId}">${selectOptions.map(opt => `<option ${value === opt ? "selected" : ""}>${opt}</option>`).join("")}</select>`;
+  } else {
+    inputHtml = `<input id="${inputId}" type="${type}" value="${esc(value || "")}" placeholder="${esc(placeholder)}" ${readonly ? 'readonly style="background:#f1f5f9;"' : ""}>`;
+  }
+
+  return `
+  <div class="field-doc-row ${fullWidth ? "full" : ""}">
+    <div class="field-input-part">
+      <label>${label} ${required ? '<span class="req-star">*</span>' : ""}</label>
+      ${inputHtml}
+    </div>
+    <div class="field-doc-part">
+      <div class="field-doc-label">
+        <span>${docLabel} ${required ? '<span class="req-star">*</span>' : ""}</span>
+        <span class="vault-meta-tag">Attached in Vault</span>
+      </div>
+      <div class="doc-upload-box">
+        <div class="doc-upload-info" title="${esc(currentDoc)}">
+          <span class="pdf-badge">PDF</span>
+          <span class="doc-upload-filename" id="${labelId}">${esc(currentDoc)}</span>
+        </div>
+        <div class="doc-upload-actions">
+          <label class="btn btn-small btn-primary upload-label-btn" title="Upload or replace PDF file">
+            <span>Upload PDF</span>
+            <input type="file" accept=".pdf" class="vault-pdf-input" data-doc-key="${docKey}" data-label-id="${labelId}">
+          </label>
+          <button type="button" class="btn btn-small" data-action="view-vault-pdf" data-dockey="${docKey}" data-doctitle="${esc(docLabel)}">View PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 /* Expanded Applicant Profile & Data Vault */
 function profilePage() {
   if (!isCitizen()) return "";
   const p = getUserProfile(currentUser.email);
   const docs = p.vaultDocuments || {};
 
-  return `${heading("Applicant Profile & Data Vault", `Reusable Citizen Data & Document Vault for ${esc(currentUser.name)}. Authorized departments fetch these verified details upon your explicit application consent.`, `<button class="btn btn-primary" data-action="save-profile-details">Save Profile Vault Changes</button>`)}
+  const masterDocsList = [
+    { key: "photoDoc", name: "Passport Photo & ID Proof", field: "Applicant Full Name", file: docs.photoDoc || "Applicant_Photo_ID_Proof.pdf", size: "640 KB" },
+    { key: "birthDoc", name: "Birth Certificate / School Leaving Proof", field: "Date of Birth / Age", file: docs.birthDoc || "Birth_Certificate_Proof.pdf", size: "890 KB" },
+    { key: "aadhaarDoc", name: "Aadhaar Card (UIDAI Verified)", field: "Aadhaar Number (12-Digit UID)", file: docs.aadhaarDoc || "Aadhaar_Card_Verified.pdf", size: "710 KB" },
+    { key: "panDoc", name: "PAN Card (Income Tax Department)", field: "PAN Card Number", file: docs.panDoc || "PAN_Card_Verified.pdf", size: "520 KB" },
+    { key: "voterDoc", name: "Voter ID / EPIC Card (ECI)", field: "Voter ID / EPIC Number", file: docs.voterDoc || "Voter_ID_Card.pdf", size: "680 KB" },
+    { key: "addressDoc", name: "Address Proof (Electricity Bill / Utility)", field: "Permanent Address Line 1", file: docs.addressDoc || "Electricity_Bill_Address.pdf", size: "1.2 MB" },
+    { key: "domicileDoc", name: "Maharashtra Domicile Certificate", field: "Domicile Certificate Number", file: docs.domicileDoc || "Domicile_Certificate.pdf", size: "950 KB" },
+    { key: "incomeDoc", name: "Annual Income Certificate (Revenue)", field: "Annual Income / Cert Number", file: docs.incomeDoc || "Income_Certificate_Verified.pdf", size: "980 KB" },
+    { key: "landDoc", name: "7/12 Land Record (MahaBhulekh)", field: "7/12 Khata / Land Record Ref", file: docs.landDoc || "MahaBhulekh_7_12_Extract.pdf", size: "1.3 MB" },
+    { key: "passbookDoc", name: "Bank Passbook Copy & DBT Linkage", field: "Bank Account / IFSC Code", file: docs.passbookDoc || "Bank_Passbook_Copy.pdf", size: "840 KB" },
+    { key: "casteDoc", name: "Caste / Tribe Validity Certificate", field: "Caste Certificate Number", file: docs.casteDoc || "Caste_Certificate.pdf", size: "920 KB" },
+    { key: "rationDoc", name: "Public Distribution Ration Card", field: "Ration Card Number", file: docs.rationDoc || "Ration_Card_Family.pdf", size: "1.1 MB" },
+    { key: "udidDoc", name: "UDID Disability Card / Medical Board", field: "UDID Certificate Number", file: docs.udidDoc || "UDID_Disability_Card.pdf", size: "780 KB" },
+    { key: "educationDoc", name: "Degree Certificate & Passing Marksheet", field: "Highest Qualification / College", file: docs.educationDoc || "College_Marksheet_Score.pdf", size: "1.4 MB" },
+    { key: "admissionDoc", name: "CAP Allotment Letter / Fee Receipt", field: "College Admission & Course", file: docs.admissionDoc || "CAP_Round_Allotment_Letter.pdf", size: "1.5 MB" }
+  ];
+
+  return `${heading("Applicant Profile & Data Vault", `Reusable Citizen Data & Document Vault for ${esc(currentUser.name)}. Authorized departments fetch these verified details and attached PDF documents upon your explicit application consent.`, `<button class="btn btn-primary" data-action="save-profile-details">Save Profile Vault Changes</button>`)}
  <div class="notice">
-   <b>Interoperability Protocol Blueprint:</b> Store common information once, apply consent-based sharing, and allow each department to request only the additional service-specific details/documents required for its workflow.
+   <b>Interoperability Protocol Blueprint:</b> In each section below, documents (in PDF format) can be uploaded and viewed directly in front of each required field. Authorized departments retrieve these verified PDF attachments automatically when you apply.
  </div>
  <div class="accordion" id="profileAccordion">
 
   <!-- 1. Common Citizen Data (Identity & Family) -->
   <div class="accordion-item open">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>1. Common Citizen Data (Identity & Family)</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>1. Common Citizen Data (Identity & Family Details)</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
+    ${renderFieldWithDocUpload({
+      label: "Full Applicant Name",
+      id: "p_name",
+      value: currentUser?.name || "",
+      required: true,
+      docKey: "photoDoc",
+      docLabel: "Identity Proof & Passport Photo (PDF)",
+      docDefault: "Applicant_Photo_ID_Proof.pdf",
+      docs
+    })}
+    ${renderFieldWithDocUpload({
+      label: "Date of Birth / Age",
+      id: "p_dob",
+      type: "date",
+      value: p.dob || "",
+      required: true,
+      docKey: "birthDoc",
+      docLabel: "Birth Proof / School Leaving Certificate (PDF)",
+      docDefault: "Birth_Certificate_Proof.pdf",
+      docs
+    })}
     <div class="form-grid">
-     <div class="field"><label>Full Applicant Name *</label><input id="p_name" value="${esc(currentUser?.name || "")}"></div>
      <div class="field"><label>Email Address (Account ID) *</label><input id="p_email" readonly style="background:#f1f5f9;" value="${esc(currentUser?.email || "")}"></div>
+     <div class="field"><label>Mobile Number (OTP Verified) *</label><input id="p_phone" value="${esc(p.phone || "+91 98765 43210")}"></div>
      <div class="field"><label>Father's Name</label><input id="p_father" value="${esc(p.fatherName || "")}"></div>
      <div class="field"><label>Mother's Name</label><input id="p_mother" value="${esc(p.motherName || "")}"></div>
-     <div class="field"><label>Date of Birth / Age</label><input id="p_dob" type="date" value="${esc(p.dob || "")}"></div>
      <div class="field"><label>Gender</label><select id="p_gender"><option ${p.gender === "Male" ? "selected" : ""}>Male</option><option ${p.gender === "Female" ? "selected" : ""}>Female</option><option ${p.gender === "Other" ? "selected" : ""}>Other</option></select></div>
      <div class="field"><label>Marital Status</label><select id="p_marital"><option ${p.maritalStatus === "Unmarried" ? "selected" : ""}>Unmarried</option><option ${p.maritalStatus === "Married" ? "selected" : ""}>Married</option><option ${p.maritalStatus === "Widowed" ? "selected" : ""}>Widowed</option></select></div>
-     <div class="field"><label>Mobile Number (OTP Verified) *</label><input id="p_phone" value="${esc(p.phone || "+91 98765 43210")}"></div>
     </div>
    </div>
   </div>
 
-  <!-- 2. Common Verified Document Vault -->
+  <!-- 2. Master Reusable Document Vault (Digital Attachments Repository) -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>2. Reusable Document Vault (Digital Attachments)</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>2. Reusable Document Vault (Master PDF Repository)</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
-    <p class="muted" style="font-size:11px;margin-top:0">Documents uploaded here are automatically attached to government service requests when consent is granted.</p>
-    <div class="form-grid">
-     <div class="field"><label>Aadhaar Card (Identity Proof)</label><input value="${esc(docs.aadhaarDoc || "Aadhaar_Card_Verified.pdf")}" readonly style="background:#f8fafc"></div>
-     <div class="field"><label>PAN Card (Tax Proof)</label><input value="${esc(docs.panDoc || "PAN_Card_Verified.pdf")}" readonly style="background:#f8fafc"></div>
-     <div class="field"><label>Address Proof (Electricity Bill / Ration Card)</label><input value="${esc(docs.addressDoc || "Electricity_Bill_Address.pdf")}" readonly style="background:#f8fafc"></div>
-     <div class="field"><label>Passport Photograph & Signature</label><input value="${esc(docs.photoDoc || "Applicant_Photo.jpg")}" readonly style="background:#f8fafc"></div>
-     <div class="field"><label>Bank Passbook Copy</label><input value="${esc(docs.passbookDoc || "Bank_Passbook_Copy.pdf")}" readonly style="background:#f8fafc"></div>
-     <div class="field"><label>Ration Card Copy</label><input value="${esc(docs.rationDoc || "Ration_Card_Family.pdf")}" readonly style="background:#f8fafc"></div>
+    <p class="muted" style="font-size:11px;margin-top:0">All documents uploaded in front of required fields are centrally cataloged below in PDF format. Department reviewers view and verify these attachments when processing your service applications.</p>
+    <div class="table-wrap">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Document Specification</th>
+            <th>Required For Field</th>
+            <th>PDF File Attachment</th>
+            <th>Size</th>
+            <th>Vault Status</th>
+            <th style="text-align:right">Document Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${masterDocsList.map(d => `
+          <tr>
+            <td><b>${esc(d.name)}</b></td>
+            <td><span class="vault-meta-tag">${esc(d.field)}</span></td>
+            <td>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span class="pdf-badge">PDF</span>
+                <span data-master-doc="${esc(d.key)}" style="font-weight:700;color:#0f172a">${esc(d.file)}</span>
+              </div>
+            </td>
+            <td>${esc(d.size)}</td>
+            <td><span class="status status-success">Attached &amp; Encrypted</span></td>
+            <td style="text-align:right">
+              <div style="display:inline-flex;gap:6px">
+                <label class="btn btn-small btn-primary upload-label-btn" title="Upload new PDF">
+                  <span>Upload PDF</span>
+                  <input type="file" accept=".pdf" class="vault-pdf-input" data-doc-key="${esc(d.key)}" data-label-id="doc_lbl_${esc(d.key)}">
+                </label>
+                <button type="button" class="btn btn-small" data-action="view-vault-pdf" data-dockey="${esc(d.key)}" data-doctitle="${esc(d.name)}">View PDF</button>
+              </div>
+            </td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
     </div>
    </div>
   </div>
 
   <!-- 3. Government Identity & UID Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>3. Government Identity & Tax Verification (UIDAI / IT Dept)</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>3. Government Identity &amp; Tax Verification (UIDAI / IT Dept / ECI)</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
-    <div class="form-grid">
-     <div class="field"><label>Aadhaar Number (12-Digit UID)</label><input id="p_aadhaar" value="${esc(p.aadhaarNo || "")}" placeholder="e.g. 4821 9901 8823"></div>
-     <div class="field"><label>PAN Card Number</label><input id="p_pan" value="${esc(p.panNo || "")}" placeholder="e.g. ABCDE1234F"></div>
-     <div class="field full"><label>Voter ID / EPIC Number</label><input id="p_voter" value="${esc(p.voterId || "")}" placeholder="e.g. MH/04/012/981242"></div>
-    </div>
+    ${renderFieldWithDocUpload({
+      label: "Aadhaar Number (12-Digit UID)",
+      id: "p_aadhaar",
+      value: p.aadhaarNo || "",
+      placeholder: "e.g. 4821 9901 8823",
+      required: true,
+      docKey: "aadhaarDoc",
+      docLabel: "Aadhaar Card Copy (UIDAI Verified PDF)",
+      docDefault: "Aadhaar_Card_Verified.pdf",
+      docs
+    })}
+    ${renderFieldWithDocUpload({
+      label: "PAN Card Number",
+      id: "p_pan",
+      value: p.panNo || "",
+      placeholder: "e.g. ABCDE1234F",
+      required: true,
+      docKey: "panDoc",
+      docLabel: "PAN Card Document (Income Tax Dept PDF)",
+      docDefault: "PAN_Card_Verified.pdf",
+      docs
+    })}
+    ${renderFieldWithDocUpload({
+      label: "Voter ID / EPIC Number",
+      id: "p_voter",
+      value: p.voterId || "",
+      placeholder: "e.g. MH/04/012/981242",
+      required: false,
+      docKey: "voterDoc",
+      docLabel: "Voter Identity Card (ECI Verified PDF)",
+      docDefault: "Voter_ID_Card.pdf",
+      docs
+    })}
    </div>
   </div>
 
   <!-- 4. Location & Address Details -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>4. Permanent & Correspondence Address</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>4. Permanent &amp; Correspondence Address</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
+    ${renderFieldWithDocUpload({
+      label: "Permanent Address Line 1",
+      id: "p_addr",
+      value: p.addressLine1 || "",
+      placeholder: "e.g. Flat 402, Green Enclave, Shivaji Nagar",
+      required: true,
+      docKey: "addressDoc",
+      docLabel: "Address Proof (Electricity Bill / Water Bill PDF)",
+      docDefault: "Electricity_Bill_Address.pdf",
+      docs
+    })}
     <div class="form-grid">
-     <div class="field full"><label>Permanent Address Line 1</label><input id="p_addr" value="${esc(p.addressLine1 || "")}"></div>
      <div class="field"><label>State</label><input id="p_state" value="${esc(p.state || "Maharashtra")}"></div>
      <div class="field"><label>District</label><input id="p_district" value="${esc(p.district || "Pune")}"></div>
      <div class="field"><label>Taluka / Tehsil</label><input id="p_taluka" value="${esc(p.taluka || "")}"></div>
      <div class="field"><label>Village / City</label><input id="p_village" value="${esc(p.village || "Shivaji Nagar")}"></div>
-     <div class="field"><label>Pincode</label><input id="p_pincode" value="${esc(p.pincode || "")}"></div>
+     <div class="field full"><label>Pincode</label><input id="p_pincode" value="${esc(p.pincode || "")}"></div>
     </div>
    </div>
   </div>
 
   <!-- 5. Income, Land & Revenue Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>5. Income, Domicile & Land Records (MahaRevenue)</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>5. Income, Domicile &amp; Land Records (MahaRevenue)</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
-    <div class="form-grid">
-     <div class="field"><label>Are you a Domicile of Maharashtra?</label><select id="p_domicile"><option ${p.domicileCert === "Yes" ? "selected" : ""}>Yes</option><option ${p.domicileCert === "No" ? "selected" : ""}>No</option></select></div>
-     <div class="field"><label>Domicile Certificate Number</label><input id="p_dom_no" value="${esc(p.domicileNo || "")}"></div>
-     <div class="field"><label>Family Annual Income (Rs.)</label><input id="p_income" value="${esc(p.annualIncome || "")}"></div>
-     <div class="field"><label>Income Certificate Number</label><input id="p_income_no" value="${esc(p.incomeCertNo || "")}"></div>
-     <div class="field full"><label>7/12 Extract Khata / Land Record Ref (MahaBhulekh)</label><input id="p_land" value="${esc(p.landRecordNo || "")}" placeholder="e.g. 7/12-HAV-9921"></div>
+    ${renderFieldWithDocUpload({
+      label: "Domicile Certificate Number",
+      id: "p_dom_no",
+      value: p.domicileNo || "",
+      placeholder: "e.g. DOM-2025-8821",
+      required: true,
+      docKey: "domicileDoc",
+      docLabel: "Maharashtra State Domicile Certificate (PDF)",
+      docDefault: "Domicile_Certificate.pdf",
+      docs
+    })}
+    <div class="field" style="margin-bottom:10px">
+      <label>Are you a Domicile of Maharashtra? *</label>
+      <select id="p_domicile"><option ${p.domicileCert === "Yes" ? "selected" : ""}>Yes</option><option ${p.domicileCert === "No" ? "selected" : ""}>No</option></select>
     </div>
+    ${renderFieldWithDocUpload({
+      label: "Income Certificate Number",
+      id: "p_income_no",
+      value: p.incomeCertNo || "",
+      placeholder: "e.g. INC-2025-9921",
+      required: true,
+      docKey: "incomeDoc",
+      docLabel: "Annual Income Certificate (Tahsildar Issued PDF)",
+      docDefault: "Income_Certificate_Verified.pdf",
+      docs
+    })}
+    <div class="field" style="margin-bottom:10px">
+      <label>Family Annual Income (Rs.) *</label>
+      <input id="p_income" value="${esc(p.annualIncome || "120000")}" placeholder="e.g. 120000">
+    </div>
+    ${renderFieldWithDocUpload({
+      label: "7/12 Extract Khata / Land Record Ref (MahaBhulekh)",
+      id: "p_land",
+      value: p.landRecordNo || "",
+      placeholder: "e.g. 7/12-HAV-9921",
+      required: false,
+      docKey: "landDoc",
+      docLabel: "7/12 Land Record Extract (MahaBhulekh PDF)",
+      docDefault: "MahaBhulekh_7_12_Extract.pdf",
+      docs
+    })}
    </div>
   </div>
 
@@ -610,39 +824,107 @@ function profilePage() {
   <div class="accordion-item">
    <button class="accordion-header" onclick="toggleAccordion(this)"><span>6. Direct Benefit Transfer (DBT) Bank Details</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
+    ${renderFieldWithDocUpload({
+      label: "Bank Account Number",
+      id: "p_bank_acc",
+      value: p.bankAccount || "",
+      placeholder: "e.g. 5010029812411",
+      required: true,
+      docKey: "passbookDoc",
+      docLabel: "Bank Passbook Copy / Cancelled Cheque (PDF)",
+      docDefault: "Bank_Passbook_Copy.pdf",
+      docs
+    })}
     <div class="form-grid">
-     <div class="field"><label>Bank Account Number</label><input id="p_bank_acc" value="${esc(p.bankAccount || "")}" placeholder="Account Number"></div>
-     <div class="field"><label>Bank Name</label><input id="p_bank_name" value="${esc(p.bankName || "")}" placeholder="e.g. State Bank of India"></div>
-     <div class="field full"><label>IFSC Code</label><input id="p_bank_ifsc" value="${esc(p.ifscCode || "")}" placeholder="e.g. SBIN0000300"></div>
+     <div class="field"><label>Bank Name *</label><input id="p_bank_name" value="${esc(p.bankName || "HDFC Bank")}" placeholder="e.g. State Bank of India"></div>
+     <div class="field"><label>IFSC Code *</label><input id="p_bank_ifsc" value="${esc(p.ifscCode || "HDFC0000142")}" placeholder="e.g. SBIN0000300"></div>
     </div>
    </div>
   </div>
 
   <!-- 7. Social Category, Ration & Inclusion Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>7. Social Category, Ration & Inclusion Vault</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>7. Social Category, Ration &amp; Inclusion Vault</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
-    <div class="form-grid">
-     <div class="field"><label>Category</label><select id="p_cat"><option ${p.category === "General" ? "selected" : ""}>General</option><option ${p.category === "OBC" ? "selected" : ""}>OBC</option><option ${p.category === "SC" ? "selected" : ""}>SC</option><option ${p.category === "ST" ? "selected" : ""}>ST</option><option ${p.category === "EWS" ? "selected" : ""}>EWS</option></select></div>
-     <div class="field"><label>Caste Certificate Number</label><input id="p_caste_no" value="${esc(p.casteCertNo || "")}"></div>
-     <div class="field"><label>Ration Card Number</label><input id="p_ration_no" value="${esc(p.rationCardNo || "")}"></div>
-     <div class="field"><label>Ration Card Category</label><select id="p_ration_type"><option ${p.rationType === "Yellow (BPL)" ? "selected" : ""}>Yellow (BPL)</option><option ${p.rationType === "Saffron (APL)" ? "selected" : ""}>Saffron (APL)</option><option ${p.rationType === "White" ? "selected" : ""}>White</option></select></div>
-     <div class="field"><label>Person with Disability (Divyang)?</label><select id="p_disabled"><option ${p.isHandicapped === "No" ? "selected" : ""}>No</option><option ${p.isHandicapped === "Yes" ? "selected" : ""}>Yes</option></select></div>
-     <div class="field"><label>UDID Certificate Number (If Divyang)</label><input id="p_udid" value="${esc(p.udidNo || "")}"></div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Category *</label>
+      <select id="p_cat"><option ${p.category === "General" ? "selected" : ""}>General</option><option ${p.category === "OBC" ? "selected" : ""}>OBC</option><option ${p.category === "SC" ? "selected" : ""}>SC</option><option ${p.category === "ST" ? "selected" : ""}>ST</option><option ${p.category === "EWS" ? "selected" : ""}>EWS</option></select>
     </div>
+    ${renderFieldWithDocUpload({
+      label: "Caste Certificate Number (If SC/ST/OBC/EWS)",
+      id: "p_caste_no",
+      value: p.casteCertNo || "",
+      placeholder: "e.g. CST-MH-2025-4421",
+      required: false,
+      docKey: "casteDoc",
+      docLabel: "Caste / Tribe Validity Certificate (PDF)",
+      docDefault: "Caste_Certificate.pdf",
+      docs
+    })}
+    ${renderFieldWithDocUpload({
+      label: "Ration Card Number",
+      id: "p_ration_no",
+      value: p.rationCardNo || "",
+      placeholder: "e.g. RC-MH-981242",
+      required: true,
+      docKey: "rationDoc",
+      docLabel: "Public Distribution Ration Card Copy (PDF)",
+      docDefault: "Ration_Card_Family.pdf",
+      docs
+    })}
+    <div class="field" style="margin-bottom:10px">
+      <label>Ration Card Category</label>
+      <select id="p_ration_type"><option ${p.rationType === "Yellow (BPL)" ? "selected" : ""}>Yellow (BPL)</option><option ${p.rationType === "Saffron (APL)" ? "selected" : ""}>Saffron (APL)</option><option ${p.rationType === "White" ? "selected" : ""}>White</option></select>
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Person with Disability (Divyang)?</label>
+      <select id="p_disabled"><option ${p.isHandicapped === "No" ? "selected" : ""}>No</option><option ${p.isHandicapped === "Yes" ? "selected" : ""}>Yes</option></select>
+    </div>
+    ${renderFieldWithDocUpload({
+      label: "UDID Certificate Number (If Divyang)",
+      id: "p_udid",
+      value: p.udidNo || "",
+      placeholder: "e.g. MH-12-UDID-9921",
+      required: false,
+      docKey: "udidDoc",
+      docLabel: "UDID Disability Certificate / Medical Board (PDF)",
+      docDefault: "UDID_Disability_Card.pdf",
+      docs
+    })}
    </div>
   </div>
 
   <!-- 8. Educational & Employment Vault -->
   <div class="accordion-item">
-   <button class="accordion-header" onclick="toggleAccordion(this)"><span>8. Educational Qualifications & Employment Vault</span><span class="accordion-icon">+</span></button>
+   <button class="accordion-header" onclick="toggleAccordion(this)"><span>8. Educational Qualifications &amp; Employment Vault</span><span class="accordion-icon">+</span></button>
    <div class="accordion-content">
+    ${renderFieldWithDocUpload({
+      label: "Highest Qualification & Marksheet",
+      id: "p_qual",
+      value: p.qualification || "Undergraduate",
+      placeholder: "e.g. B.Tech / Higher Secondary / Graduate",
+      required: true,
+      docKey: "educationDoc",
+      docLabel: "Degree Certificate / Passing Marksheet (PDF)",
+      docDefault: "College_Marksheet_Score.pdf",
+      docs
+    })}
     <div class="form-grid">
-     <div class="field"><label>Highest Qualification</label><input id="p_qual" value="${esc(p.qualification || "")}"></div>
      <div class="field"><label>Employment Status</label><select id="p_emp_status"><option ${p.employmentStatus === "Student" ? "selected" : ""}>Student</option><option ${p.employmentStatus === "Employed" ? "selected" : ""}>Employed</option><option ${p.employmentStatus === "Self-Employed" ? "selected" : ""}>Self-Employed</option><option ${p.employmentStatus === "Unemployed" ? "selected" : ""}>Unemployed</option></select></div>
-     <div class="field"><label>College / Institution Name</label><input id="p_college" value="${esc(p.collegeName || "")}"></div>
-     <div class="field"><label>Degree / Course Name</label><input id="p_course" value="${esc(p.courseName || "")}"></div>
+     <div class="field"><label>College / Institution Name *</label><input id="p_college" value="${esc(p.collegeName || "AISSMS IOIT Pune")}"></div>
+     <div class="field full"><label>Degree / Course Name *</label><input id="p_course" value="${esc(p.courseName || "B.Tech Computer Engineering")}"></div>
     </div>
+    ${renderFieldWithDocUpload({
+      label: "College Admission / Enrollment Proof",
+      id: "p_course_enroll",
+      value: p.courseName || "B.Tech Computer Engineering",
+      placeholder: "Course Name / Enrollment Reference",
+      required: false,
+      docKey: "admissionDoc",
+      docLabel: "CAP Round Allotment Letter / Fee Receipt (PDF)",
+      docDefault: "CAP_Round_Allotment_Letter.pdf",
+      docs
+    })}
    </div>
   </div>
 
@@ -652,6 +934,380 @@ function profilePage() {
 function toggleAccordion(btn) {
   const item = btn.parentElement;
   item.classList.toggle("open");
+}
+
+/* Vault PDF File Upload Handler */
+function handleVaultPdfUpload(input, docKey, labelId) {
+  if (!input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  if (!file.name.toLowerCase().endsWith(".pdf")) {
+    toast("Invalid file type: Please upload a document in PDF format (.pdf only).");
+    input.value = "";
+    return;
+  }
+  const email = currentUser.email.toLowerCase();
+  const profile = getUserProfile(email);
+  if (!profile.vaultDocuments) profile.vaultDocuments = {};
+  profile.vaultDocuments[docKey] = file.name;
+
+  if (state.userProfiles[email]) {
+    if (!state.userProfiles[email].vaultDocuments) state.userProfiles[email].vaultDocuments = {};
+    state.userProfiles[email].vaultDocuments[docKey] = file.name;
+  }
+
+  const labelEl = document.getElementById(labelId);
+  if (labelEl) labelEl.textContent = file.name;
+
+  const masterCell = document.querySelector(`[data-master-doc="${docKey}"]`);
+  if (masterCell) masterCell.textContent = file.name;
+
+  save();
+  logAudit(`Uploaded vault PDF document: ${file.name} for ${docKey}`, currentUser.email);
+  toast(`Document ${file.name} attached in PDF format!`);
+}
+
+/* Interactive Citizen Vault PDF Viewer Modal */
+function openVaultPdfViewer(docKey, docTitle) {
+  const email = currentUser.email.toLowerCase();
+  const profile = getUserProfile(email);
+  const docs = profile.vaultDocuments || {};
+  const filename = docs[docKey] || (docKey + ".pdf");
+
+  let docContentHtml = "";
+
+  if (docKey === "aadhaarDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">GOVERNMENT OF INDIA</div>
+        <div class="pdf-gov-title">UNIQUE IDENTIFICATION AUTHORITY OF INDIA (UIDAI)</div>
+        <div class="pdf-doc-type">Official e-Aadhaar Digital Identity Letter</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Enrollment No:</b> 2026/88192/01294</span>
+        <span><b>Format:</b> Adobe PDF</span>
+        <span><b>Generation Date:</b> 15-Jan-2026</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This document is digitally signed by UIDAI and serves as statutory proof of identity under the Aadhaar (Targeted Delivery of Financial and Other Subsidies, Benefits and Services) Act, 2016:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Resident Full Name</td><td class="val-cell">${esc(currentUser.name)}</td></tr>
+          <tr><td class="label-cell">Aadhaar Number (UID)</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(profile.aadhaarNo || "4821 9901 8823")}</td></tr>
+          <tr><td class="label-cell">Date of Birth / Gender</td><td class="val-cell">${esc(profile.dob || "15-May-1998")} · ${esc(profile.gender || "Male")}</td></tr>
+          <tr><td class="label-cell">Permanent Address</td><td class="val-cell">${esc(profile.addressLine1 || "42, Green Enclave")}, ${esc(profile.district || "Pune")}, Maharashtra - ${esc(profile.pincode || "411005")}</td></tr>
+          <tr><td class="label-cell">Mobile Number Linkage</td><td class="val-cell">${esc(profile.phone || "+91 98765 43210")} (Verified via OTP)</td></tr>
+          <tr><td class="label-cell">Biometric &amp; e-KYC Status</td><td class="val-cell" style="color:var(--green)">Biometrics Active · e-KYC Level 2 Compliant</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">UIDAI DIGITAL SEAL<br>GOVT OF INDIA<br>VERIFIED VAULT</div>
+        <div class="pdf-officer-signature">
+          <b>Deputy Director General (e-Governance)</b><br>
+          Unique Identification Authority of India<br>
+          <small>SHA-256 Digital Certificate: uidai.gov.in/ds/88fa29</small>
+        </div>
+      </div>`;
+  } else if (docKey === "panDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">INCOME TAX DEPARTMENT · GOVT OF INDIA</div>
+        <div class="pdf-gov-title">PERMANENT ACCOUNT NUMBER (e-PAN) RECORD</div>
+        <div class="pdf-doc-type">Statutory Tax Identification Document</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>PAN Reference:</b> ${esc(profile.panNo || "ABCDE1234F")}</span>
+        <span><b>Category:</b> Individual Citizen</span>
+        <span><b>Status:</b> Active &amp; Aadhaar Linked</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This e-PAN certificate is issued under Section 139A of the Income Tax Act, 1961, and is legally valid for all financial transactions and official verifications:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Taxpayer Full Name</td><td class="val-cell">${esc(currentUser.name)}</td></tr>
+          <tr><td class="label-cell">Permanent Account Number (PAN)</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(profile.panNo || "ABCDE1234F")}</td></tr>
+          <tr><td class="label-cell">Father's Name</td><td class="val-cell">${esc(profile.fatherName || "Ramesh Patil")}</td></tr>
+          <tr><td class="label-cell">Date of Birth</td><td class="val-cell">${esc(profile.dob || "15-May-1998")}</td></tr>
+          <tr><td class="label-cell">Aadhaar-PAN Seeding</td><td class="val-cell" style="color:var(--green)">SEEDED &amp; LINKED WITH UIDAI REPOSITORY</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">INCOME TAX DEPT<br>OFFICIAL SEAL<br>NEW DELHI</div>
+        <div class="pdf-officer-signature">
+          <b>Director General of Income Tax (Systems)</b><br>
+          Central Board of Direct Taxes, New Delhi<br>
+          <small>Digital Signature Validated via NSDL Tax Gateway</small>
+        </div>
+      </div>`;
+  } else if (docKey === "incomeDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA · REVENUE DEPARTMENT</div>
+        <div class="pdf-gov-title">OFFICE OF THE TAHSILDAR · TALUKA HAVELI, PUNE</div>
+        <div class="pdf-doc-type">Official Annual Income Certificate (Tahsil Revenue)</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Certificate No:</b> ${esc(profile.incomeCertNo || "INC-2025-9921")}</span>
+        <span><b>Financial Year:</b> 2025-2026</span>
+        <span><b>Date of Issue:</b> 10-Aug-2025</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This is to certify based on field inquiry and revenue record verification that the total annual family income of the applicant is certified as follows:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Applicant Name</td><td class="val-cell">${esc(currentUser.name)}</td></tr>
+          <tr><td class="label-cell">Father / Guardian Name</td><td class="val-cell">${esc(profile.fatherName || "Ramesh Patil")}</td></tr>
+          <tr><td class="label-cell">Permanent Residence</td><td class="val-cell">${esc(profile.addressLine1 || "42, Green Enclave")}, ${esc(profile.district || "Pune")}</td></tr>
+          <tr><td class="label-cell">Annual Family Income</td><td class="val-cell" style="color:var(--teal);font-size:12px">Rs. ${esc(profile.annualIncome || "120,000")}/- (One Lakh Twenty Thousand Only)</td></tr>
+          <tr><td class="label-cell">Income Source Breakdown</td><td class="val-cell">Agriculture &amp; Salaried Services</td></tr>
+          <tr><td class="label-cell">Tahsil Scrutiny Status</td><td class="val-cell" style="color:var(--green)">Panchanama Conducted &amp; Revenue Record Verified</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">TAHSILDAR OFFICE<br>HAVELI TALUKA<br>DISTRICT PUNE</div>
+        <div class="pdf-officer-signature">
+          <b>Tahsildar &amp; Executive Magistrate</b><br>
+          Taluka Haveli, District Pune<br>
+          <small>Digital Hash: rev.mah.gov.in/inc/2025-99214</small>
+        </div>
+      </div>`;
+  } else if (docKey === "domicileDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA · REVENUE DEPARTMENT</div>
+        <div class="pdf-gov-title">OFFICE OF THE SUB-DIVISIONAL MAGISTRATE</div>
+        <div class="pdf-doc-type">Certificate of Age, Nationality &amp; Domicile of Maharashtra</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Certificate No:</b> ${esc(profile.domicileNo || "DOM-2025-8821")}</span>
+        <span><b>Jurisdiction:</b> Pune Division</span>
+        <span><b>Status:</b> Permanent Domicile</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>On verification of school leaving certificates, birth records, and residential history, it is certified that:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Citizen Full Name</td><td class="val-cell">${esc(currentUser.name)}</td></tr>
+          <tr><td class="label-cell">Father's Name</td><td class="val-cell">${esc(profile.fatherName || "Ramesh Patil")}</td></tr>
+          <tr><td class="label-cell">Place of Birth</td><td class="val-cell">${esc(profile.village || "Shivaji Nagar")}, ${esc(profile.district || "Pune")}, Maharashtra</td></tr>
+          <tr><td class="label-cell">Continuous Residence in State</td><td class="val-cell">More than 15 Years (Continuous Resident)</td></tr>
+          <tr><td class="label-cell">State Domicile Status</td><td class="val-cell" style="color:var(--green)">DOMICILE OF STATE OF MAHARASHTRA (CONFIRMED)</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">DISTRICT MAGISTRATE<br>PUNE DISTRICT<br>MAHARASHTRA</div>
+        <div class="pdf-officer-signature">
+          <b>Sub-Divisional Magistrate / Deputy Collector</b><br>
+          Pune Sub-Division, Government of Maharashtra<br>
+          <small>Digitally signed under MahaOnline e-District Framework</small>
+        </div>
+      </div>`;
+  } else if (docKey === "landDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">MAHARASHTRA LAND REVENUE · MAHABHULEKH</div>
+        <div class="pdf-gov-title">VILLAGE FORM VII-XII (7/12 EXTRACT RECORD OF RIGHTS)</div>
+        <div class="pdf-doc-type">Official Land Ownership &amp; Crop Ledger Extract</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Khata No:</b> ${esc(profile.landRecordNo || "7/12-HAV-9921")}</span>
+        <span><b>Village:</b> ${esc(profile.village || "Shivaji Nagar")}</span>
+        <span><b>Taluka:</b> ${esc(profile.taluka || "Haveli")}</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>Official digital extract from the computerised land records repository of the Government of Maharashtra:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Account Holder / Occupant Name</td><td class="val-cell">${esc(profile.fatherName || currentUser.name)} &amp; Joint Family</td></tr>
+          <tr><td class="label-cell">Survey Number / Gut No</td><td class="val-cell">Gut No. 142/3 (Sub-Division B)</td></tr>
+          <tr><td class="label-cell">Total Area of Holding</td><td class="val-cell">1.85 Hectares (Assessed Land)</td></tr>
+          <tr><td class="label-cell">Land Tenure Classification</td><td class="val-cell">Bhogvatdar Class-1 (Occupant Class I - Freehold)</td></tr>
+          <tr><td class="label-cell">Assessment &amp; Encumbrances</td><td class="val-cell" style="color:var(--green)">NIL ENCUMBRANCES · LAND REVENUE CLEAR</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">TALATHI SAJJA<br>REVENUE &amp; FOREST DEPT<br>MAHABHULEKH</div>
+        <div class="pdf-officer-signature">
+          <b>Talathi &amp; Circle Officer</b><br>
+          Land Records &amp; Settlement Commissionerate, Pune<br>
+          <small>Digital RoR Authentication: mahabhulekh.maharashtra.gov.in</small>
+        </div>
+      </div>`;
+  } else if (docKey === "passbookDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">${esc((profile.bankName || "HDFC Bank").toUpperCase())}</div>
+        <div class="pdf-gov-title">SAVINGS BANK PASSBOOK &amp; DBT LINKAGE CERTIFICATE</div>
+        <div class="pdf-doc-type">Proof of Bank Account for Direct Benefit Transfer</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Account No:</b> ${esc(profile.bankAccount || "5010029812411")}</span>
+        <span><b>IFSC:</b> ${esc(profile.ifscCode || "HDFC0000142")}</span>
+        <span><b>Aadhaar Seeding:</b> Active</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This is to certify that the account detailed below is active and linked with NPCI Aadhaar Payments Bridge (APB) for direct government transfers:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Primary Account Holder</td><td class="val-cell">${esc(currentUser.name)}</td></tr>
+          <tr><td class="label-cell">Bank &amp; Branch Name</td><td class="val-cell">${esc(profile.bankName || "HDFC Bank")}, Shivaji Nagar Branch, Pune</td></tr>
+          <tr><td class="label-cell">Account Number</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(profile.bankAccount || "5010029812411")}</td></tr>
+          <tr><td class="label-cell">IFSC Code / MICR</td><td class="val-cell">${esc(profile.ifscCode || "HDFC0000142")} · 411240012</td></tr>
+          <tr><td class="label-cell">Direct Benefit Transfer (DBT) Status</td><td class="val-cell" style="color:var(--green)">ENABLED FOR PFMS &amp; MAHADBT CENTRAL SCHEMES</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">BANK SEAL<br>BRANCH MANAGER<br>PUNE BRANCH</div>
+        <div class="pdf-officer-signature">
+          <b>Branch Operations Head</b><br>
+          ${esc(profile.bankName || "HDFC Bank")}, Shivaji Nagar, Pune<br>
+          <small>Validated through Public Financial Management System (PFMS)</small>
+        </div>
+      </div>`;
+  } else if (docKey === "casteDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA · SOCIAL JUSTICE DEPARTMENT</div>
+        <div class="pdf-gov-title">OFFICE OF THE SUB-DIVISIONAL OFFICER &amp; SDO</div>
+        <div class="pdf-doc-type">Official Caste &amp; Category Certificate</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Certificate No:</b> ${esc(profile.casteCertNo || "CST-MH-2025-4421")}</span>
+        <span><b>Category:</b> ${esc(profile.category || "General")}</span>
+        <span><b>District:</b> ${esc(profile.district || "Pune")}</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This is to certify that the applicant belongs to the following recognized community under the Constitution of India:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Candidate Full Name</td><td class="val-cell">${esc(currentUser.name)}</td></tr>
+          <tr><td class="label-cell">Father's Name</td><td class="val-cell">${esc(profile.fatherName || "Ramesh Patil")}</td></tr>
+          <tr><td class="label-cell">Caste / Category</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(profile.category || "General")} Category</td></tr>
+          <tr><td class="label-cell">District &amp; State</td><td class="val-cell">${esc(profile.district || "Pune")}, State of Maharashtra</td></tr>
+          <tr><td class="label-cell">Scrutiny Committee Status</td><td class="val-cell" style="color:var(--green)">Verified &amp; Authenticated for State Educational/Job Quota</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">SDO OFFICE<br>SOCIAL JUSTICE DEPT<br>MAHARASHTRA</div>
+        <div class="pdf-officer-signature">
+          <b>Sub-Divisional Officer &amp; Competent Authority</b><br>
+          Social Justice and Special Assistance Department<br>
+          <small>Digitally verified by State Caste Scrutiny Committee</small>
+        </div>
+      </div>`;
+  } else if (docKey === "rationDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">FOOD, CIVIL SUPPLIES &amp; CONSUMER PROTECTION DEPARTMENT</div>
+        <div class="pdf-gov-title">NATIONAL FOOD SECURITY ACT · RATION CARD RECORD</div>
+        <div class="pdf-doc-type">Public Distribution System (PDS) Digital Family Card</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Ration Card No:</b> ${esc(profile.rationCardNo || "RC-MH-981242")}</span>
+        <span><b>Card Type:</b> ${esc(profile.rationType || "Saffron (APL)")}</span>
+        <span><b>FPS Code:</b> FPS-142 Pune</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>Official Public Distribution Card issued under NFSA 2013 for essential foodgrains and household distribution:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Head of Family</td><td class="val-cell">${esc(profile.fatherName || currentUser.name)}</td></tr>
+          <tr><td class="label-cell">Ration Card Number</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(profile.rationCardNo || "RC-MH-981242")}</td></tr>
+          <tr><td class="label-cell">Card Category</td><td class="val-cell">${esc(profile.rationType || "Saffron (APL)")}</td></tr>
+          <tr><td class="label-cell">Registered Beneficiary</td><td class="val-cell">${esc(currentUser.name)} (Family Member)</td></tr>
+          <tr><td class="label-cell">PDS e-PoS Aadhaar Authentication</td><td class="val-cell" style="color:var(--green)">ACTIVE ON ELECTRONIC POINT OF SALE (e-PoS) NETWORK</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">DISTRICT SUPPLY OFFICE<br>FOOD &amp; CIVIL SUPPLIES<br>MAHARASHTRA</div>
+        <div class="pdf-officer-signature">
+          <b>District Supply Officer (DSO)</b><br>
+          Food, Civil Supplies and Consumer Protection Department<br>
+          <small>Digitally validated via rcms.mahafood.gov.in</small>
+        </div>
+      </div>`;
+  } else if (docKey === "educationDoc") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">DIRECTORATE OF HIGHER EDUCATION · MAHARASHTRA</div>
+        <div class="pdf-gov-title">OFFICIAL DEGREE CERTIFICATE &amp; CONSOLIDATED MARKSHEET</div>
+        <div class="pdf-doc-type">Statutory Academic Qualification Record</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Institution:</b> ${esc(profile.collegeName || "AISSMS IOIT Pune")}</span>
+        <span><b>Course:</b> ${esc(profile.courseName || "B.Tech Computer Engineering")}</span>
+        <span><b>Status:</b> Complete / In-Progress</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This is to certify that candidate <b>${esc(currentUser.name)}</b> has demonstrated academic qualification with details certified below:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Student Full Name</td><td class="val-cell">${esc(currentUser.name)}</td></tr>
+          <tr><td class="label-cell">College / Institution</td><td class="val-cell">${esc(profile.collegeName || "AISSMS IOIT Pune")}</td></tr>
+          <tr><td class="label-cell">Course / Programme</td><td class="val-cell">${esc(profile.courseName || "B.Tech Computer Engineering")}</td></tr>
+          <tr><td class="label-cell">Highest Qualification</td><td class="val-cell">${esc(profile.qualification || "Undergraduate")}</td></tr>
+          <tr><td class="label-cell">Grade / Result Ledger Match</td><td class="val-cell" style="color:var(--green)">VERIFIED VIA STATE ACADEMIC BANK OF CREDITS (ABC)</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">ACADEMIC BOARD<br>EXAMINATION CELL<br>STATE DEPOSITORY</div>
+        <div class="pdf-officer-signature">
+          <b>Controller of Examinations &amp; Registrar</b><br>
+          Directorate of Higher and Technical Education<br>
+          <small>Authenticated via National Academic Depository (NAD)</small>
+        </div>
+      </div>`;
+  } else {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA · SETU CITIZEN DATA VAULT</div>
+        <div class="pdf-gov-title">${esc((docTitle || docKey).toUpperCase())}</div>
+        <div class="pdf-doc-type">Official Citizen Document Attachment (PDF Format)</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>File Name:</b> ${esc(filename)}</span>
+        <span><b>Vault Key:</b> ${esc(docKey)}</span>
+        <span><b>Format:</b> Adobe PDF Document</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This document is stored in the citizen's secure, tamper-evident e-Governance vault and is authorized for cross-departmental verification upon citizen consent:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Document Owner / Applicant</td><td class="val-cell">${esc(currentUser.name)}</td></tr>
+          <tr><td class="label-cell">Document Specification</td><td class="val-cell">${esc(docTitle || docKey)}</td></tr>
+          <tr><td class="label-cell">Attached PDF File</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(filename)}</td></tr>
+          <tr><td class="label-cell">Owner Mobile / Email</td><td class="val-cell">${esc(profile.phone || "+91 98765 43210")} · ${esc(currentUser.email)}</td></tr>
+          <tr><td class="label-cell">Encryption &amp; Integrity Status</td><td class="val-cell" style="color:var(--green)">SHA-256 Checksum Verified · DigiLocker Compliant</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">CITIZEN DATA VAULT<br>INTEROPERABLE E-GOV<br>STATE OF MAHARASHTRA</div>
+        <div class="pdf-officer-signature">
+          <b>State Data Protection Officer</b><br>
+          Setu e-Governance Interoperability Framework<br>
+          <small>Digitally Sealed via State Data Centre Vault</small>
+        </div>
+      </div>`;
+  }
+
+  openModal(`PDF Document Viewer — ${esc(filename)}`, `
+    <div class="pdf-modal-container">
+      <div class="pdf-toolbar">
+        <div class="pdf-toolbar-left">
+          <span class="pdf-badge">PDF</span>
+          <span class="pdf-title">${esc(filename)}</span>
+          <span style="font-size:9px;color:#94a3b8">Vault Attachment · 100% · Official PDF</span>
+        </div>
+        <div class="pdf-toolbar-right">
+          <button class="btn btn-small" onclick="window.print()">Print Document</button>
+          <button class="btn btn-small btn-primary" data-action="close-modal">Close Viewer</button>
+        </div>
+      </div>
+      <div class="pdf-body-scroll">
+        <div class="pdf-page-sheet">
+          <div class="pdf-watermark">SETU CITIZEN DATA VAULT</div>
+          ${docContentHtml}
+        </div>
+      </div>
+      <div class="pdf-footer-verification">
+        <div class="pdf-verif-status">
+          <b>Vault Security Status:</b>
+          <span class="status status-success">ATTACHED &amp; VERIFIED IN VAULT</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:6px">· Eligible for Auto-Submission to Departments</span>
+        </div>
+        <button class="btn btn-small" data-action="close-modal">Done</button>
+      </div>
+    </div>
+  `);
 }
 
 /* Save profile data dynamically */
@@ -668,8 +1324,11 @@ function saveProfileDataFromUI() {
     if (matchedUser) matchedUser.name = currentUser.name;
   }
 
+  const existingProfile = getUserProfile(email);
+  const currentDocs = (state.userProfiles[email] && state.userProfiles[email].vaultDocuments) || existingProfile.vaultDocuments || {};
+
   state.userProfiles[email] = {
-    ...getUserProfile(email),
+    ...existingProfile,
     fatherName: document.getElementById("p_father")?.value || "",
     motherName: document.getElementById("p_mother")?.value || "",
     dob: document.getElementById("p_dob")?.value || "",
@@ -704,12 +1363,15 @@ function saveProfileDataFromUI() {
     qualification: document.getElementById("p_qual")?.value || "",
     employmentStatus: document.getElementById("p_emp_status")?.value || "Student",
     collegeName: document.getElementById("p_college")?.value || "",
-    courseName: document.getElementById("p_course")?.value || ""
+    courseName: document.getElementById("p_course")?.value || "",
+    vaultDocuments: {
+      ...currentDocs
+    }
   };
 
   save();
   logAudit("Updated e-Governance live profile vault", currentUser.email);
-  toast("Profile data saved dynamically to your vault!");
+  toast("Profile data & attached PDF documents saved dynamically to your vault!");
 }
 
 function servicesPage() {
@@ -1819,6 +2481,11 @@ document.addEventListener("click", e => {
     save(); closeModal(); go("applications"); toast("Request submitted! Reference: " + id);
   }
 
+  if (a === "view-vault-pdf") {
+    openVaultPdfViewer(el.dataset.dockey, el.dataset.doctitle);
+    return;
+  }
+
   if (a === "open-pdf-viewer") {
     openPdfDocumentViewer(el.dataset.app, el.dataset.doc);
     return;
@@ -2042,6 +2709,10 @@ document.addEventListener("click", e => {
 
 document.addEventListener("change", e => {
   const el = e.target;
+  if (el.matches(".vault-pdf-input")) {
+    handleVaultPdfUpload(el, el.dataset.docKey, el.dataset.labelId);
+    return;
+  }
   if (el.matches('[data-action="toggle-integration"]')) {
     const i = state.integrations.find(x => x.id === el.dataset.id); if (!i) return;
     i.status = el.checked; i.latency = i.status ? 156 : 0; logAudit(i.status ? "Enabled connector" : "Paused connector", i.name); save(); render(); toast(i.name + (i.status ? " connected." : " paused."));

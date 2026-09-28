@@ -304,3 +304,28 @@ tr.clickable{cursor:pointer}tr.clickable:hover td{background:#f8fafc}
 .pdf-footer-verification{background:#f1f5f9;border-top:1px solid #cbd5e1;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .pdf-verif-status{font-size:11px;font-weight:750;color:#0f172a}
 
+/* Inline Field Document (PDF) Upload Option Components */
+.field-doc-row{display:grid;grid-template-columns:1.05fr 1.15fr;gap:14px;align-items:flex-end;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:10px;transition:border-color .15s ease,box-shadow .15s ease}
+.field-doc-row:hover{border-color:#cbd5e1;box-shadow:var(--shadow-sm)}
+.field-doc-row.full{grid-column:1/-1}
+.field-input-part{min-width:0;display:flex;flex-direction:column}
+.field-input-part label{display:block;font-size:11px;font-weight:750;color:#1e293b;margin-bottom:5px}
+.field-input-part input,.field-input-part select{width:100%;height:36px;border:1px solid var(--line);border-radius:8px;padding:0 11px;font-size:11px;color:#0f172a;background:white}
+.field-input-part input:focus,.field-input-part select:focus{border-color:var(--teal);outline:none;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.field-input-group{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field-doc-part{min-width:0;display:flex;flex-direction:column;justify-content:flex-end}
+.field-doc-label{font-size:10px;font-weight:750;color:#475569;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between}
+.doc-upload-box{background:white;border:1px solid #cbd5e1;border-radius:8px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px}
+.doc-upload-info{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
+.doc-upload-filename{font-size:10px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-upload-actions{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.upload-label-btn{position:relative;cursor:pointer;margin:0;display:inline-flex;align-items:center;overflow:hidden}
+.upload-label-btn input[type="file"]{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.req-star{color:var(--red);font-weight:800;margin-left:2px}
+.vault-meta-tag{font-size:9px;color:#64748b;font-weight:600}
+
+@media(max-width:850px){
+  .field-doc-row{grid-template-columns:1fr;gap:8px}
+}
+
+
