@@ -1375,6 +1375,7 @@ function saveProfileDataFromUI() {
 }
 
 function servicesPage() {
+  if (!isCitizen()) return dashboard();
   const list = state.services.filter(s => s.active);
   return `${heading("Service Directory", "Select a connected government service to apply.", isAdmin() ? `<button class="btn btn-primary" data-action="add-service">+ Add Service</button>` : "")}
  <div class="grid service-grid">${list.map(s => `<article class="service-card">
@@ -1390,7 +1391,7 @@ function servicesPage() {
 
 function applicationsPage() {
   let apps = visibleApps();
-  return `${heading(canReview() ? "Application Review Workspace" : "My Applications", canReview() ? "Review requests, inspect fetched applicant vault data, or issue official certificates." : "Track request milestones across processing departments.", `${canReview() ? `<button class="btn" data-action="export-apps">Export CSV</button>` : ""}<button class="btn btn-primary" data-action="new-application">+ New Request</button>`)}
+  return `${heading(canReview() ? "Application Review Workspace" : "My Applications", canReview() ? "Review requests, inspect fetched applicant vault data, or issue official certificates." : "Track request milestones across processing departments.", `${canReview() ? `<button class="btn" data-action="export-apps">Export CSV</button>` : ""}${isCitizen() ? `<button class="btn btn-primary" data-action="new-application">+ New Request</button>` : ""}`)}
  <div class="panel">
    <div class="panel-head">
      <div><h2 class="panel-title">${canReview() ? "Department Application Queue" : "Your Submitted Requests"}</h2><div class="panel-subtitle">${apps.length} request(s) found · Click row to view details, inspect fetched vault data, or generate certificates.</div></div>
@@ -1484,6 +1485,250 @@ function openModal(title, body, foot = "") {
 }
 function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
 
+/* Custom Interactive Date & Time Picker Engine */
+let dtPickerState = {
+  year: 2026,
+  month: 1, // 0-indexed: 1 = February
+  day: 10,
+  hour: 4,  // 0 to 23
+  minute: 30, // 0 to 59
+  isOpen: false
+};
+
+const dtMonthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function getPickerFormattedDate() {
+  const yyyy = dtPickerState.year;
+  const mm = String(dtPickerState.month + 1).padStart(2, "0");
+  const dd = String(dtPickerState.day).padStart(2, "0");
+  const hh = String(dtPickerState.hour).padStart(2, "0");
+  const min = String(dtPickerState.minute).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+}
+
+function updatePickerPreview() {
+  const previewEl = document.getElementById("dtPreviewText");
+  if (previewEl) previewEl.innerHTML = `Selected: <b>${getPickerFormattedDate()}</b>`;
+}
+
+function openCustomDateTimePicker() {
+  const popover = document.getElementById("customDateTimePicker");
+  if (!popover) return;
+
+  const currentVal = document.getElementById("app_child_dob")?.value.trim();
+  if (currentVal) {
+    const dMatch = currentVal.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (dMatch) {
+      dtPickerState.year = parseInt(dMatch[1], 10);
+      dtPickerState.month = Math.max(0, Math.min(11, parseInt(dMatch[2], 10) - 1));
+      dtPickerState.day = parseInt(dMatch[3], 10);
+    }
+    const tMatch = currentVal.match(/(\d{1,2}):(\d{2})/);
+    if (tMatch) {
+      dtPickerState.hour = Math.max(0, Math.min(23, parseInt(tMatch[1], 10)));
+      dtPickerState.minute = Math.max(0, Math.min(59, parseInt(tMatch[2], 10)));
+    }
+  }
+
+  dtPickerState.isOpen = true;
+  popover.style.display = "block";
+  renderCustomDateTimePicker();
+
+  setTimeout(() => {
+    const activeH = popover.querySelector("#dtHourList .active");
+    if (activeH) activeH.scrollIntoView({ block: "center" });
+    const activeM = popover.querySelector("#dtMinList .active");
+    if (activeM) activeM.scrollIntoView({ block: "center" });
+    popover.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, 40);
+}
+
+function closeCustomDateTimePicker() {
+  const popover = document.getElementById("customDateTimePicker");
+  if (popover) popover.style.display = "none";
+  dtPickerState.isOpen = false;
+}
+
+function confirmCustomDateTimePicker() {
+  const inp = document.getElementById("app_child_dob");
+  if (inp) {
+    const formatted = getPickerFormattedDate();
+    inp.value = formatted;
+    inp.dataset.isoValue = formatted.replace(" ", "T");
+    inp.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  closeCustomDateTimePicker();
+  toast("Date and time set to: " + getPickerFormattedDate());
+}
+
+function prevPickerMonth() {
+  if (dtPickerState.month === 0) {
+    dtPickerState.month = 11;
+    dtPickerState.year--;
+  } else {
+    dtPickerState.month--;
+  }
+  renderCustomDateTimePicker();
+}
+
+function nextPickerMonth() {
+  if (dtPickerState.month === 11) {
+    dtPickerState.month = 0;
+    dtPickerState.year++;
+  } else {
+    dtPickerState.month++;
+  }
+  renderCustomDateTimePicker();
+}
+
+function selectPickerDay(d) {
+  dtPickerState.day = d;
+  const popover = document.getElementById("customDateTimePicker");
+  if (popover) {
+    popover.querySelectorAll(".dt-days-grid .dt-day-btn").forEach(el => {
+      el.classList.toggle("active", parseInt(el.textContent, 10) === d);
+    });
+  }
+  updatePickerPreview();
+}
+
+function selectPickerHour(h) {
+  dtPickerState.hour = h;
+  const popover = document.getElementById("customDateTimePicker");
+  if (popover) {
+    popover.querySelectorAll("#dtHourList .dt-time-item").forEach(el => {
+      el.classList.toggle("active", parseInt(el.textContent, 10) === h);
+    });
+  }
+  updatePickerPreview();
+}
+
+function selectPickerMinute(m) {
+  dtPickerState.minute = m;
+  const popover = document.getElementById("customDateTimePicker");
+  if (popover) {
+    popover.querySelectorAll("#dtMinList .dt-time-item").forEach(el => {
+      el.classList.toggle("active", parseInt(el.textContent, 10) === m);
+    });
+  }
+  updatePickerPreview();
+}
+
+function clearPickerDateTime() {
+  const inp = document.getElementById("app_child_dob");
+  if (inp) {
+    inp.value = "";
+    inp.dataset.isoValue = "";
+  }
+  closeCustomDateTimePicker();
+  toast("Date and time cleared.");
+}
+
+function setPickerToday() {
+  const now = new Date();
+  dtPickerState.year = now.getFullYear();
+  dtPickerState.month = now.getMonth();
+  dtPickerState.day = now.getDate();
+  dtPickerState.hour = now.getHours();
+  dtPickerState.minute = now.getMinutes();
+  renderCustomDateTimePicker();
+}
+
+function renderCustomDateTimePicker() {
+  const popover = document.getElementById("customDateTimePicker");
+  if (!popover) return;
+
+  const daysInMonth = new Date(dtPickerState.year, dtPickerState.month + 1, 0).getDate();
+  const firstDay = new Date(dtPickerState.year, dtPickerState.month, 1).getDay();
+
+  let daysHtml = "";
+  for (let i = 0; i < firstDay; i++) {
+    daysHtml += `<div class="dt-day-btn empty"></div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isAct = d === dtPickerState.day;
+    daysHtml += `<button type="button" class="dt-day-btn ${isAct ? "active" : ""}" onclick="selectPickerDay(${d})">${d}</button>`;
+  }
+
+  let hoursHtml = "";
+  for (let h = 0; h < 24; h++) {
+    const isAct = h === dtPickerState.hour;
+    hoursHtml += `<button type="button" class="dt-time-item ${isAct ? "active" : ""}" onclick="selectPickerHour(${h})">${String(h).padStart(2, "0")}</button>`;
+  }
+
+  let minsHtml = "";
+  for (let m = 0; m < 60; m++) {
+    const isAct = m === dtPickerState.minute;
+    minsHtml += `<button type="button" class="dt-time-item ${isAct ? "active" : ""}" onclick="selectPickerMinute(${m})">${String(m).padStart(2, "0")}</button>`;
+  }
+
+  popover.innerHTML = `
+    <div class="dt-picker-card">
+      <div class="dt-picker-head">
+        <span class="dt-picker-title">Select Date &amp; Time of Birth</span>
+        <button type="button" class="dt-close-btn" onclick="closeCustomDateTimePicker()" title="Close">X</button>
+      </div>
+      <div class="dt-picker-body">
+        <!-- Date Selection Column -->
+        <div class="dt-date-col">
+          <div class="dt-month-nav">
+            <button type="button" class="dt-nav-arrow" onclick="prevPickerMonth()" title="Previous month">&lt;</button>
+            <span class="dt-month-label">${dtMonthNames[dtPickerState.month]}, ${dtPickerState.year}</span>
+            <button type="button" class="dt-nav-arrow" onclick="nextPickerMonth()" title="Next month">&gt;</button>
+          </div>
+          <div class="dt-week-row">
+            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+          </div>
+          <div class="dt-days-grid">${daysHtml}</div>
+          <div class="dt-quick-date-row">
+            <button type="button" class="dt-quick-btn" onclick="clearPickerDateTime()">Clear</button>
+            <button type="button" class="dt-quick-btn" onclick="setPickerToday()">Today</button>
+          </div>
+        </div>
+
+        <!-- Time Selection Column with Prominent TIME Heading -->
+        <div class="dt-time-col">
+          <div class="dt-time-head">
+            <div class="dt-time-title">Time</div>
+            <div class="dt-time-sub">(24-Hour Format)</div>
+          </div>
+          <div class="dt-time-selectors">
+            <div class="dt-time-column">
+              <div class="dt-col-label">Hour</div>
+              <div class="dt-scroll-list" id="dtHourList">${hoursHtml}</div>
+            </div>
+            <div class="dt-colon">:</div>
+            <div class="dt-time-column">
+              <div class="dt-col-label">Minute</div>
+              <div class="dt-scroll-list" id="dtMinList">${minsHtml}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Bar with Selected Preview and OK Button -->
+      <div class="dt-picker-footer">
+        <div class="dt-selected-preview" id="dtPreviewText">Selected: <b>${getPickerFormattedDate()}</b></div>
+        <div class="dt-footer-actions">
+          <button type="button" class="btn btn-small" onclick="closeCustomDateTimePicker()">Cancel</button>
+          <button type="button" class="btn btn-primary btn-small dt-ok-btn" onclick="confirmCustomDateTimePicker()">OK</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.openCustomDateTimePicker = openCustomDateTimePicker;
+window.closeCustomDateTimePicker = closeCustomDateTimePicker;
+window.confirmCustomDateTimePicker = confirmCustomDateTimePicker;
+window.prevPickerMonth = prevPickerMonth;
+window.nextPickerMonth = nextPickerMonth;
+window.selectPickerDay = selectPickerDay;
+window.selectPickerHour = selectPickerHour;
+window.selectPickerMinute = selectPickerMinute;
+window.clearPickerDateTime = clearPickerDateTime;
+window.setPickerToday = setPickerToday;
+
 /* Dynamic Service-Specific Input Fields generator matching reference blueprint */
 function renderServiceSpecificFields(serviceId, profile, hasConsent) {
   switch (serviceId) {
@@ -1506,9 +1751,18 @@ function renderServiceSpecificFields(serviceId, profile, hasConsent) {
      <div class="field"><label>Number of Employees *</label><input id="app_biz_emp" placeholder="e.g. 12"></div>`;
     case "birth":
       return `
-     <div class="field"><label>Child's Full Name *</label><input id="app_child_name" placeholder="Enter child's full name"></div>
-     <div class="field"><label>Date & Time of Birth *</label><input id="app_child_dob" type="datetime-local"></div>
-     <div class="field full"><label>Place of Birth / Hospital Name *</label><input id="app_hospital" placeholder="e.g. Sahyadri Hospital, Pune"></div>`;
+     <div class="field"><label>Child's Full Name *</label><input id="app_child_name" placeholder="Enter child's full name" value="${esc(hasConsent ? "Advait Deshmukh" : "")}"></div>
+     <div class="field dt-picker-field" style="position:relative">
+       <label>Date &amp; Time of Birth *</label>
+       <div class="dt-input-wrapper">
+         <input id="app_child_dob" type="text" readonly placeholder="YYYY-MM-DD HH:MM" value="${esc(hasConsent ? "2026-02-10 04:30" : "2026-09-28 09:30")}" onclick="openCustomDateTimePicker()" style="cursor:pointer;background:white">
+         <button type="button" class="dt-calendar-btn" onclick="openCustomDateTimePicker()" title="Select Date &amp; Time">
+           <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+         </button>
+       </div>
+       <div id="customDateTimePicker" class="dt-picker-popover" style="display:none"></div>
+     </div>
+     <div class="field full"><label>Place of Birth / Hospital Name *</label><input id="app_hospital" placeholder="e.g. Sahyadri Hospital, Pune" value="${esc(hasConsent ? "Sahyadri Hospital, Pune" : "")}"></div>`;
     case "pension":
       return `
      <div class="field"><label>Pension Scheme Type *</label><select id="app_pension_type"><option>Indira Gandhi National Old Age Pension</option><option>State Senior Citizen Support</option></select></div>
@@ -2752,7 +3006,10 @@ document.getElementById("notificationBtn").onclick = () => {
 
 document.addEventListener("click", e => {
   if (!e.target.closest("#notificationBtn") && !e.target.closest("#notificationPop")) {
-    document.getElementById("notificationPop").classList.remove("open");
+    document.getElementById("notificationPop")?.classList.remove("open");
+  }
+  if (dtPickerState.isOpen && !e.target.closest("#customDateTimePicker") && !e.target.closest(".dt-input-wrapper")) {
+    closeCustomDateTimePicker();
   }
 });
 
