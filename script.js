@@ -1,8 +1,8 @@
-const KEY = "setu-gov-v9";
+const KEY = "setu-gov-v10";
 
 const defaultUsers = [
   { id: "u-admin", name: "Platform Admin", email: "admin@setu.gov.in", password: "Setu@2026", role: "admin", department: "Government of Maharashtra" },
-  { id: "u-reviewer", name: "Department Reviewer", email: "reviewer@setu.gov.in", password: "Review@2026", role: "reviewer", department: "Revenue Department" },
+  { id: "u-reviewer", name: "Department Reviewer", email: "reviewer@setu.gov.in", password: "Review@2026", role: "reviewer", department: "Government of Maharashtra" },
   { id: "u-citizen", name: "Aarav Patil", email: "citizen@example.com", password: "Citizen@2026", role: "citizen", department: "" }
 ];
 
@@ -78,12 +78,17 @@ const defaultState = {
 
 function clone(x) { return JSON.parse(JSON.stringify(x)); }
 function loadState() {
+  let st;
   try {
     const loaded = JSON.parse(localStorage.getItem(KEY) || "{}");
-    return { ...clone(defaultState), ...loaded };
+    st = { ...clone(defaultState), ...loaded };
   } catch {
-    return clone(defaultState);
+    st = clone(defaultState);
   }
+  if (st && st.applications) {
+    st.applications.forEach(a => ensureAppVerification(a));
+  }
+  return st;
 }
 
 let state = loadState(), currentUser = null, currentPage = "dashboard", toastTimer;
@@ -116,10 +121,25 @@ function updateCount() {
   if (el) el.textContent = visibleApps().length;
 }
 
+function canReviewApp(app) {
+  if (!currentUser) return false;
+  if (isAdmin()) return true;
+  if (isReviewer()) {
+    if (!currentUser.department || currentUser.department === "Government of Maharashtra" || currentUser.department === "All Departments") return true;
+    return app.department === currentUser.department;
+  }
+  return false;
+}
+
 function visibleApps() {
   if (!currentUser) return [];
   if (isAdmin()) return state.applications;
-  if (isReviewer()) return state.applications.filter(a => a.department === currentUser.department);
+  if (isReviewer()) {
+    if (!currentUser.department || currentUser.department === "Government of Maharashtra" || currentUser.department === "All Departments") {
+      return state.applications;
+    }
+    return state.applications.filter(a => a.department === currentUser.department);
+  }
   return state.applications.filter(a => a.email.toLowerCase() === currentUser.email.toLowerCase() || a.applicant.toLowerCase() === currentUser.name.toLowerCase());
 }
 
@@ -701,7 +721,20 @@ function applicationsPage() {
  <div class="panel">
    <div class="panel-head">
      <div><h2 class="panel-title">${canReview() ? "Department Application Queue" : "Your Submitted Requests"}</h2><div class="panel-subtitle">${apps.length} request(s) found · Click row to view details, inspect fetched vault data, or generate certificates.</div></div>
-     <select id="statusFilter" class="btn"><option value="">All Statuses</option><option>Submitted</option><option>In review</option><option>Information requested</option><option>Approved</option><option>Rejected</option></select>
+     <div style="display:flex;gap:8px;flex-wrap:wrap">
+       ${canReview() ? `
+       <select id="deptFilter" class="btn">
+         <option value="">All Departments</option>
+         <option value="Municipal Services">Municipal Services</option>
+         <option value="Education Department">Education Department</option>
+         <option value="Revenue Department">Revenue Department</option>
+         <option value="Industries Department">Industries Department</option>
+         <option value="Social Justice Department">Social Justice Department</option>
+         <option value="Transport Department">Transport Department</option>
+         <option value="Food &amp; Civil Supplies">Food &amp; Civil Supplies</option>
+       </select>` : ""}
+       <select id="statusFilter" class="btn"><option value="">All Statuses</option><option>Submitted</option><option>In review</option><option>Information requested</option><option>Approved</option><option>Rejected</option></select>
+     </div>
    </div>
    <div class="table-wrap">
      <table><thead><tr><th>Reference</th><th>Service</th><th>Applicant</th><th>Status</th><th>Current Step</th><th>Action</th><th></th></tr></thead><tbody id="applicationTable">${rowsApps(apps)}</tbody></table>
@@ -917,14 +950,578 @@ function updateServiceModalFields(selectedServiceId) {
   openApply(selectedServiceId);
 }
 
-/* Application detail modal - Shows fetched citizen vault data to Department Officers */
+/* Department Verification & Document Vault Engine */
+function ensureAppVerification(app) {
+  if (!app.verification) {
+    app.verification = {
+      registryStatus: "verified",
+      registrySystem: "",
+      registryTitle: "",
+      registryData: {},
+      registryMessage: "",
+      documents: []
+    };
+  }
+
+  const sLower = (app.service || "").toLowerCase();
+  const profile = getUserProfile(app.email);
+  const details = app.serviceDetails || {};
+
+  if (sLower.includes("birth")) {
+    app.verification.registrySystem = "Hospital Delivery Registry · Civil Registration System (CRS)";
+    app.verification.registryTitle = "Hospital Birth Record Cross-Verification";
+    const hospital = details.hospital || details.birthPlace || "Sahyadri Hospital, Pune";
+    const childName = details.child_name || details.childName || "Advait Deshmukh";
+    const dob = details.child_dob || details.birthDate || "2026-02-10";
+
+    if (!app.verification.registryData || Object.keys(app.verification.registryData).length === 0) {
+      app.verification.registryData = {
+        hospital: hospital,
+        childName: childName,
+        dob: dob,
+        parents: `${profile.motherName || "Sunita Patil"} & ${app.applicant}`,
+        hospitalRegNo: "HOSP-CRS-2026-" + (app.id.split("-").pop() || "99214"),
+        doctor: "Dr. R. K. Joshi, MD (Obstetrics & Gynaecology)",
+        deliveryType: "Institutional Delivery (Normal)",
+        statusInHospital: "Confirmed in Maternity Ward Digital Ledger"
+      };
+      app.verification.registryStatus = "verified";
+      app.verification.registryMessage = "Verified in Hospital Data";
+    }
+
+    if (!app.verification.documents || app.verification.documents.length === 0) {
+      app.verification.documents = [
+        {
+          id: "doc-birth-summary",
+          name: "Hospital Discharge Summary & Birth Report",
+          filename: "Hospital_Discharge_Summary_Birth_Report.pdf",
+          size: "1.4 MB",
+          type: "hospital_report",
+          status: "pending",
+          details: { hospital, childName, dob, doctor: "Dr. R. K. Joshi", weight: "3.25 kg", gender: "Male" }
+        },
+        {
+          id: "doc-delivery-slip",
+          name: "Hospital IPD Admission & Delivery Slip",
+          filename: "Hospital_Delivery_Admission_Slip.pdf",
+          size: "820 KB",
+          type: "delivery_slip",
+          status: "pending",
+          details: { hospital, admissionNo: "IPD-88219", bedNo: "Maternity-Ward-04", regDate: dob }
+        },
+        {
+          id: "doc-parents-aadhaar",
+          name: "Parents Joint Identity & Aadhaar Proof",
+          filename: "Parents_Joint_Aadhaar_Proof.pdf",
+          size: "950 KB",
+          type: "aadhaar",
+          status: "pending",
+          details: { applicant: app.applicant, aadhaarNo: profile.aadhaarNo || "4821 9901 8823" }
+        }
+      ];
+    }
+  } else if (sLower.includes("scholarship")) {
+    app.verification.registrySystem = "MahaDBT & University Student ERP Central Registry";
+    app.verification.registryTitle = "University Academic & Enrollment Cross-Check";
+    const college = details.college || details.collegeName || profile.collegeName || "COEP Technological University Pune";
+    const course = details.course || details.courseName || profile.courseName || "B.Tech Computer Science";
+    const marks = details.marks || "88.5%";
+
+    if (!app.verification.registryData || Object.keys(app.verification.registryData).length === 0) {
+      app.verification.registryData = {
+        university: "Savitribai Phule Pune University (SPPU)",
+        college: college,
+        course: course,
+        prnNo: "PRN-72019942B",
+        academicYear: "2025-2026",
+        attendance: "87.4% (Eligible)",
+        marksVerified: marks + " (Official Grade Ledger Match)"
+      };
+      app.verification.registryStatus = "verified";
+      app.verification.registryMessage = "Verified in University Enrollment Database";
+    }
+
+    if (!app.verification.documents || app.verification.documents.length === 0) {
+      app.verification.documents = [
+        {
+          id: "doc-allotment",
+          name: "CAP Round College Allotment Letter",
+          filename: "Allotment_Letter_CAP_Round_2025.pdf",
+          size: "1.5 MB",
+          type: "allotment_letter",
+          status: "pending",
+          details: { student: app.applicant, college, course, capRound: "CAP Round II", meritNo: "MH-2025-4129" }
+        },
+        {
+          id: "doc-fee-receipt",
+          name: "College Fee Receipt Paid by Student",
+          filename: "College_Fee_Receipt_Paid_2025_26.pdf",
+          size: "880 KB",
+          type: "fee_receipt",
+          status: "pending",
+          details: { student: app.applicant, college, receiptNo: "FR-2025-99214", amountPaid: "Rs. 65,000/-", paymentMode: "Online UPI / NetBanking", status: "PAID IN FULL" }
+        },
+        {
+          id: "doc-aadhaar",
+          name: "Aadhaar Card (UIDAI Verified)",
+          filename: "Aadhaar_Card_Verified.pdf",
+          size: "710 KB",
+          type: "aadhaar",
+          status: "pending",
+          details: { applicant: app.applicant, aadhaarNo: profile.aadhaarNo || "4821 9901 8823" }
+        },
+        {
+          id: "doc-pan",
+          name: "PAN Card (Income Tax Department)",
+          filename: "PAN_Card_Verified.pdf",
+          size: "520 KB",
+          type: "pan",
+          status: "pending",
+          details: { applicant: app.applicant, panNo: profile.panNo || "ABCDE1234F" }
+        },
+        {
+          id: "doc-marksheet",
+          name: "Previous Semester Marksheet",
+          filename: "Semester_Marksheet_Score.pdf",
+          size: "1.2 MB",
+          type: "marksheet",
+          status: "pending",
+          details: { student: app.applicant, college, course, percentage: marks, result: "PASS - FIRST CLASS WITH DISTINCTION" }
+        },
+        {
+          id: "doc-income",
+          name: "Annual Income Certificate",
+          filename: "Income_Certificate_Verified.pdf",
+          size: "980 KB",
+          type: "income_cert",
+          status: "pending",
+          details: { applicant: app.applicant, certNo: profile.incomeCertNo || "INC-2025-9921", annualIncome: "Rs. " + (profile.annualIncome || "120,000") + "/-" }
+        }
+      ];
+    }
+  } else if (sLower.includes("income")) {
+    app.verification.registrySystem = "MahaRevenue (MahaBhulekh 7/12) & Income Tax Department (ITR) API";
+    app.verification.registryTitle = "Land & Income Tax Digital Ledger Verification";
+    const inc = details.inc_amt || details.annualIncome || profile.annualIncome || "120000";
+
+    if (!app.verification.registryData || Object.keys(app.verification.registryData).length === 0) {
+      app.verification.registryData = {
+        declaredIncome: "Rs. " + Number(String(inc).replace(/[^0-9]/g, "") || 120000).toLocaleString("en-IN") + "/-",
+        landHolding: "7/12 Land Khata matched (1.8 Hectares, Haveli Taluka)",
+        itrStatus: "ITR-V Assessment verified with zero discrepancy",
+        tahsildarCircle: "Shivaji Nagar Circle Office, Pune"
+      };
+      app.verification.registryStatus = "verified";
+      app.verification.registryMessage = "Verified in MahaRevenue & ITR Database";
+    }
+
+    if (!app.verification.documents || app.verification.documents.length === 0) {
+      app.verification.documents = [
+        { id: "doc-panchanama", name: "Tahsildar Income Panchanama & Inquiry Report", filename: "Tahsildar_Panchanama_Report.pdf", size: "1.1 MB", type: "panchanama", status: "pending", details: { applicant: app.applicant, assessedIncome: "Rs. " + inc } },
+        { id: "doc-itr", name: "Income Tax Return / Salary Slip", filename: "Income_Tax_Return_Form16.pdf", size: "1.4 MB", type: "itr", status: "pending", details: { applicant: app.applicant, panNo: profile.panNo || "ABCDE1234F" } },
+        { id: "doc-ration", name: "Ration Card Family Unit Proof", filename: "Ration_Card_Family_Income_Proof.pdf", size: "890 KB", type: "ration", status: "pending", details: { rationNo: profile.rationCardNo || "RC-MH-981242" } },
+        { id: "doc-aadhaar", name: "Aadhaar Card (UIDAI Verified)", filename: "Aadhaar_Card_Verified.pdf", size: "710 KB", type: "aadhaar", status: "pending", details: { aadhaarNo: profile.aadhaarNo || "4821 9901 8823" } }
+      ];
+    }
+  } else if (sLower.includes("business")) {
+    app.verification.registrySystem = "Ministry of Corporate Affairs (MCA21) & GSTN Network";
+    app.verification.registryTitle = "Corporate & Tax Registration Verification";
+    const biz = details.biz_name || details.businessName || "Joshi IT Solutions Pvt Ltd";
+
+    if (!app.verification.registryData || Object.keys(app.verification.registryData).length === 0) {
+      app.verification.registryData = {
+        companyName: biz,
+        cin: "U72900PN2026PTC192841",
+        mcaStatus: "Active & Compliant",
+        directorsKYC: "Approved (DIN: 08912411)",
+        gstin: "27ABCDE1234F1Z5"
+      };
+      app.verification.registryStatus = "verified";
+      app.verification.registryMessage = "Verified in MCA21 Company Registry";
+    }
+
+    if (!app.verification.documents || app.verification.documents.length === 0) {
+      app.verification.documents = [
+        { id: "doc-coi", name: "Certificate of Incorporation (ROC Pune)", filename: "Certificate_Of_Incorporation.pdf", size: "1.3 MB", type: "coi", status: "pending", details: { companyName: biz } },
+        { id: "doc-moa", name: "Memorandum & Articles of Association (MoA)", filename: "Memorandum_And_Articles_Of_Association.pdf", size: "2.4 MB", type: "moa", status: "pending", details: { companyName: biz } },
+        { id: "doc-pan-dir", name: "Directors PAN & Aadhaar KYC", filename: "Directors_PAN_Aadhaar_KYC.pdf", size: "960 KB", type: "pan", status: "pending", details: { applicant: app.applicant } },
+        { id: "doc-lease", name: "Registered Commercial Premises Lease Deed", filename: "Commercial_Premises_Lease_Deed.pdf", size: "1.8 MB", type: "lease", status: "pending", details: { address: "Shivaji Nagar, Pune" } }
+      ];
+    }
+  } else if (sLower.includes("pension")) {
+    app.verification.registrySystem = "UIDAI Central Age Registry & PFMS Direct Benefit Transfer (DBT)";
+    app.verification.registryTitle = "Senior Age & DBT Bank Linkage Verification";
+
+    if (!app.verification.registryData || Object.keys(app.verification.registryData).length === 0) {
+      app.verification.registryData = {
+        ageProof: "Age 64 Years (DOB confirmed via UIDAI Biometric Vault)",
+        dbtStatus: "Active NPCI Aadhaar Seeded Account",
+        bankBranch: `${profile.bankName || "State Bank of India"} (A/C: ${profile.bankAccount || "5010029812"})`,
+        bplStatus: "Eligible Under State Senior Citizen Support Norms"
+      };
+      app.verification.registryStatus = "verified";
+      app.verification.registryMessage = "Verified in UIDAI Age & DBT Registry";
+    }
+
+    if (!app.verification.documents || app.verification.documents.length === 0) {
+      app.verification.documents = [
+        { id: "doc-age", name: "Age Proof & School Leaving Certificate", filename: "Age_Proof_School_Leaving_Certificate.pdf", size: "890 KB", type: "age_proof", status: "pending", details: { applicant: app.applicant, age: "64 Years" } },
+        { id: "doc-bank", name: "DBT-Seeded Bank Passbook Copy", filename: "DBT_Seeded_Bank_Passbook_Copy.pdf", size: "1.1 MB", type: "passbook", status: "pending", details: { bank: profile.bankName || "SBI", account: profile.bankAccount } },
+        { id: "doc-ration", name: "BPL Ration Card Copy", filename: "BPL_Ration_Card_Copy.pdf", size: "1.3 MB", type: "ration", status: "pending", details: { rationNo: profile.rationCardNo } },
+        { id: "doc-aadhaar", name: "Aadhaar Card (UIDAI Verified)", filename: "Aadhaar_Card_Verified.pdf", size: "710 KB", type: "aadhaar", status: "pending", details: { aadhaarNo: profile.aadhaarNo } }
+      ];
+    }
+  } else {
+    const serviceName = app.service || "Government Service";
+    app.verification.registrySystem = `${app.department} Digital Central Registry`;
+    app.verification.registryTitle = `${serviceName} Department Registry Cross-Check`;
+
+    if (!app.verification.registryData || Object.keys(app.verification.registryData).length === 0) {
+      app.verification.registryData = {
+        service: serviceName,
+        department: app.department,
+        applicant: app.applicant,
+        status: "Active Verified Record",
+        clearance: "Zero Dues / Regulatory Protocol Met"
+      };
+      app.verification.registryStatus = "verified";
+      app.verification.registryMessage = `Verified in ${app.department} Digital Database`;
+    }
+
+    if (!app.verification.documents || app.verification.documents.length === 0) {
+      app.verification.documents = [
+        { id: "doc-1", name: `${serviceName} Primary Application Proof`, filename: `${serviceName.replace(/\s+/g, "_")}_Sanction_Document.pdf`, size: "1.2 MB", type: "service_doc", status: "pending", details: { service: serviceName, applicant: app.applicant } },
+        { id: "doc-2", name: "Address & Identity Verification Document", filename: "Address_And_Identity_Proof.pdf", size: "850 KB", type: "address", status: "pending", details: { address: profile.addressLine1 } },
+        { id: "doc-3", name: "Aadhaar Card (UIDAI Verified)", filename: "Aadhaar_Card_Verified.pdf", size: "710 KB", type: "aadhaar", status: "pending", details: { aadhaarNo: profile.aadhaarNo } }
+      ];
+    }
+  }
+}
+
+/* Interactive PDF Document Viewer Modal */
+function openPdfDocumentViewer(appId, docId) {
+  const app = state.applications.find(a => a.id === appId);
+  if (!app) return;
+  ensureAppVerification(app);
+  const doc = app.verification.documents.find(d => d.id === docId);
+  if (!doc) return;
+
+  const profile = getUserProfile(app.email);
+  const d = doc.details || {};
+
+  let docContentHtml = "";
+
+  if (doc.type === "allotment_letter") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA</div>
+        <div class="pdf-gov-title">STATE COMMON ENTRANCE TEST CELL (CET CELL)</div>
+        <div class="pdf-doc-type">Provisional Seat Allotment Letter — CAP Round 2025-26</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Application ID:</b> EN25109842</span>
+        <span><b>Merit Rank:</b> State Merit No. 4129</span>
+        <span><b>Date of Issue:</b> 12-Jul-2025</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This is to certify that candidate <b>${esc(app.applicant)}</b> has been provisionally allotted admission to the undergraduate degree programme under centralized merit quota:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Candidate Full Name</td><td class="val-cell">${esc(app.applicant)}</td></tr>
+          <tr><td class="label-cell">Allotted Institution</td><td class="val-cell">${esc(d.college || "COEP Technological University, Pune")}</td></tr>
+          <tr><td class="label-cell">Course / Branch</td><td class="val-cell">${esc(d.course || "B.Tech Computer Science and Engineering")}</td></tr>
+          <tr><td class="label-cell">Allotted Seat Category</td><td class="val-cell">GOPENH (State General Open Home University)</td></tr>
+          <tr><td class="label-cell">Entrance Exam Score</td><td class="val-cell">MHT-CET Percentile: 98.42% / JEE Main: 96.10%</td></tr>
+          <tr><td class="label-cell">Annual Tuition Fee</td><td class="val-cell">Rs. 65,000/- (Govt Subsidized Rate)</td></tr>
+          <tr><td class="label-cell">Reporting Status</td><td class="val-cell" style="color:var(--green)">REPORTED &amp; ADMISSION CONFIRMED AT INSTITUTE</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">STATE CET CELL<br>MAHARASHTRA<br>OFFICIAL STAMP</div>
+        <div class="pdf-officer-signature">
+          <b>Commissioner &amp; Competent Authority</b><br>
+          State Common Entrance Test Cell, Maharashtra<br>
+          <small>Digital Hash: SHA256:88fa29c401be914</small>
+        </div>
+      </div>`;
+  } else if (doc.type === "fee_receipt") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">${esc((d.college || "COEP Technological University").toUpperCase())}</div>
+        <div class="pdf-gov-title">FINANCE &amp; ACCOUNTS DEPARTMENT</div>
+        <div class="pdf-doc-type">Official College Tuition &amp; Exam Fee Receipt</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Receipt No:</b> ${esc(d.receiptNo || "FR-2025-99214")}</span>
+        <span><b>Academic Year:</b> 2025-2026</span>
+        <span><b>Payment Date:</b> 14-Aug-2025</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>Received with thanks from student <b>${esc(app.applicant)}</b> the tuition and developmental fees as detailed below:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Student Full Name</td><td class="val-cell">${esc(app.applicant)}</td></tr>
+          <tr><td class="label-cell">Roll / PRN Number</td><td class="val-cell">PRN-72019942B</td></tr>
+          <tr><td class="label-cell">College / Institution</td><td class="val-cell">${esc(d.college || "COEP Technological University, Pune")}</td></tr>
+          <tr><td class="label-cell">Semester / Year</td><td class="val-cell">Semester 6 / Third Year Engineering</td></tr>
+          <tr><td class="label-cell">Payment Mode</td><td class="val-cell">Online UPI / NetBanking (Bank Ref: SBIN-2025-88192)</td></tr>
+          <tr><td class="label-cell">Total Amount Paid</td><td class="val-cell" style="color:var(--teal);font-size:12px">Rs. 65,000/- (Sixty Five Thousand Only)</td></tr>
+          <tr><td class="label-cell">Balance Due</td><td class="val-cell" style="color:var(--green)">Rs. 0.00 (NIL DUES)</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal" style="color:var(--green);border-color:var(--green)">FEES PAID IN FULL<br>CASH &amp; ACCOUNTS<br>ACADEMIC YR 2025-26</div>
+        <div class="pdf-officer-signature">
+          <b>Chief Accounts Officer</b><br>
+          Cash &amp; Accounts Section<br>
+          <small>Transaction Authenticated via National Payment Gateway</small>
+        </div>
+      </div>`;
+  } else if (doc.type === "hospital_report" || doc.type === "delivery_slip") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">${esc((d.hospital || "Sahyadri Super Speciality Hospital, Pune").toUpperCase())}</div>
+        <div class="pdf-gov-title">DEPARTMENT OF OBSTETRICS &amp; NEONATOLOGY</div>
+        <div class="pdf-doc-type">Institutional Birth Record &amp; Labor Room Discharge Summary</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Hospital Record UID:</b> HOSP-CRS-2026-99214</span>
+        <span><b>Bed / Ward:</b> Maternity IPD-04</span>
+        <span><b>Date of Delivery:</b> ${esc(d.dob || "2026-02-10")}</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This institutional delivery report certifies the birth of infant delivered in this hospital as recorded in the statutory civil register:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Child Full Name</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(d.childName || "Advait Deshmukh")}</td></tr>
+          <tr><td class="label-cell">Mother's Full Name</td><td class="val-cell">${esc(profile.motherName || "Sunita Patil")}</td></tr>
+          <tr><td class="label-cell">Father's Full Name</td><td class="val-cell">${esc(app.applicant)}</td></tr>
+          <tr><td class="label-cell">Date &amp; Time of Birth</td><td class="val-cell">${esc(d.dob || "10-Feb-2026")} · 04:30 AM</td></tr>
+          <tr><td class="label-cell">Gender &amp; Birth Weight</td><td class="val-cell">Male · 3.25 Kilograms</td></tr>
+          <tr><td class="label-cell">Delivery Classification</td><td class="val-cell">Institutional Delivery (Full-Term Normal Delivery)</td></tr>
+          <tr><td class="label-cell">Attending Obstetrician</td><td class="val-cell">${esc(d.doctor || "Dr. R. K. Joshi, MD (Obs & Gyn) [MMC Reg: 2004/08/2912]")}</td></tr>
+          <tr><td class="label-cell">Hospital Civil Registry Linkage</td><td class="val-cell" style="color:var(--green)">SYNCED WITH MUNICIPAL CIVIL REGISTRATION SYSTEM (CRS)</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal" style="color:var(--navy);border-color:var(--navy)">HOSPITAL CIVIL REGISTRY<br>BIRTH DISCHARGE SEAL<br>SAHYADRI PUNE</div>
+        <div class="pdf-officer-signature">
+          <b>Medical Superintendent / Civil Registrar</b><br>
+          Maternity &amp; Child Health Wing<br>
+          <small>Authorized Signatory Under Registration of Births &amp; Deaths Act</small>
+        </div>
+      </div>`;
+  } else if (doc.type === "marksheet") {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">SAVITRIBAI PHULE PUNE UNIVERSITY</div>
+        <div class="pdf-gov-title">DIRECTORATE OF BOARD OF EXAMINATIONS &amp; EVALUATION</div>
+        <div class="pdf-doc-type">Official Statement of Marks &amp; Cumulative Grade Record</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>PRN:</b> 72019942B</span>
+        <span><b>Seat No:</b> B-10928</span>
+        <span><b>Academic Session:</b> Nov/Dec 2025</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>Statement of grades secured by student <b>${esc(app.applicant)}</b> in the Bachelor of Engineering semester examination:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Student Full Name</td><td class="val-cell">${esc(app.applicant)}</td></tr>
+          <tr><td class="label-cell">College / Institution</td><td class="val-cell">${esc(d.college || "COEP Technological University, Pune")}</td></tr>
+          <tr><td class="label-cell">Branch / Course</td><td class="val-cell">${esc(d.course || "B.Tech Computer Science")}</td></tr>
+          <tr><td class="label-cell">Semester Grade Point Average</td><td class="val-cell">SGPA: 9.24 / CGPA: 9.12</td></tr>
+          <tr><td class="label-cell">Aggregate Percentage Score</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(d.percentage || "88.5%")}</td></tr>
+          <tr><td class="label-cell">Official Result Status</td><td class="val-cell" style="color:var(--green)">PASS — FIRST CLASS WITH DISTINCTION</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal" style="color:var(--navy);border-color:var(--navy)">PUNE UNIVERSITY<br>CONTROLLER OF EXAMS<br>OFFICIAL GRADE RECORD</div>
+        <div class="pdf-officer-signature">
+          <b>Director, Board of Examinations &amp; Evaluation</b><br>
+          Savitribai Phule Pune University<br>
+          <small>Digitally verified by State Higher Education Depository</small>
+        </div>
+      </div>`;
+  } else {
+    docContentHtml = `
+      <div class="pdf-header">
+        <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA · SETU PORTAL</div>
+        <div class="pdf-gov-title">${esc(doc.name.toUpperCase())}</div>
+        <div class="pdf-doc-type">Official Citizen Document Attachment</div>
+      </div>
+      <div class="pdf-meta-bar">
+        <span><b>Document Ref:</b> ${esc(doc.id.toUpperCase())}</span>
+        <span><b>Format:</b> Adobe PDF Document</span>
+        <span><b>File Size:</b> ${esc(doc.size)}</span>
+      </div>
+      <div class="pdf-content-body">
+        <p>This official government document has been verified and retrieved from the citizen data vault for application <b>${esc(app.id)}</b>:</p>
+        <table class="pdf-data-table">
+          <tr><td class="label-cell">Applicant / Holder Name</td><td class="val-cell">${esc(app.applicant)}</td></tr>
+          <tr><td class="label-cell">Associated Service</td><td class="val-cell">${esc(app.service)} (${esc(app.department)})</td></tr>
+          <tr><td class="label-cell">Attached File Name</td><td class="val-cell">${esc(doc.filename)}</td></tr>
+          <tr><td class="label-cell">Document Category</td><td class="val-cell">${esc(doc.name)}</td></tr>
+          <tr><td class="label-cell">Security Integrity Status</td><td class="val-cell" style="color:var(--green)">Tamper-Proof Digital Verification Passed</td></tr>
+        </table>
+      </div>
+      <div class="pdf-signature-row">
+        <div class="pdf-seal">SETU VERIFIED<br>DIGITAL ARCHIVE<br>STATE VAULT</div>
+        <div class="pdf-officer-signature">
+          <b>Competent Verification Authority</b><br>
+          Government of Maharashtra Interoperability Framework<br>
+          <small>e-Signed via State DigiLocker Gateway</small>
+        </div>
+      </div>`;
+  }
+
+  const isDocVerified = doc.status === "verified";
+  const isDocFlagged = doc.status === "flagged";
+
+  openModal(`PDF Document Viewer — ${esc(doc.filename)}`, `
+    <div class="pdf-modal-container">
+      <div class="pdf-toolbar">
+        <div class="pdf-toolbar-left">
+          <span class="pdf-badge">PDF</span>
+          <span class="pdf-title">${esc(doc.filename)}</span>
+          <span style="font-size:9px;color:#94a3b8">Page 1 / 1 · 100% · ${esc(doc.size)}</span>
+        </div>
+        <div class="pdf-toolbar-right">
+          <button class="btn btn-small" onclick="window.print()">Print Document</button>
+          <button class="btn btn-small btn-primary" data-action="pdf-action-back" data-app="${esc(app.id)}">Back to Application</button>
+        </div>
+      </div>
+      <div class="pdf-body-scroll">
+        <div class="pdf-page-sheet">
+          <div class="pdf-watermark">SETU E-GOV VERIFICATION SYSTEM</div>
+          ${docContentHtml}
+        </div>
+      </div>
+      <div class="pdf-footer-verification">
+        <div class="pdf-verif-status">
+          <b>Official Verification Status:</b>
+          <span class="status ${statusClass(doc.status)}">${doc.status.toUpperCase()}</span>
+          ${doc.verifiedBy ? `<span style="font-size:10px;color:var(--muted);margin-left:6px">· Verified by <b>${esc(doc.verifiedBy)}</b> at ${esc(doc.verifiedAt)}</span>` : ""}
+        </div>
+        ${canReviewApp(app) ? `
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-small btn-primary" data-action="pdf-action-verify" data-app="${esc(app.id)}" data-doc="${esc(doc.id)}">${isDocVerified ? "Re-Verify Document" : "Mark Document as Verified"}</button>
+          <button class="btn btn-small btn-danger" data-action="pdf-action-flag" data-app="${esc(app.id)}" data-doc="${esc(doc.id)}">${isDocFlagged ? "Discrepancy Flagged" : "Flag Discrepancy"}</button>
+          <button class="btn btn-small" data-action="pdf-action-back" data-app="${esc(app.id)}">Back to Application</button>
+        </div>` : `
+        <button class="btn btn-small" data-action="pdf-action-back" data-app="${esc(app.id)}">Back to Application</button>`}
+      </div>
+    </div>`,
+    ""
+  );
+}
+
+/* Application detail modal - Shows fetched citizen vault data, live department cross-check & PDF inspection */
 function showApplication(id) {
   const app = state.applications.find(a => a.id === id);
   if (!app) return;
-  const canAct = canReview() && (isAdmin() || app.department === currentUser.department) && !["Approved", "Rejected"].includes(app.status);
+  ensureAppVerification(app);
+  const canAct = canReviewApp(app) && !["Approved", "Rejected"].includes(app.status);
   const history = app.history || [app.step];
   const profile = getUserProfile(app.email);
   const docs = profile.vaultDocuments || {};
+  const isBirth = (app.service || "").toLowerCase().includes("birth");
+  const isScholarship = (app.service || "").toLowerCase().includes("scholarship");
+
+  const reg = app.verification.registryData || {};
+  const regStatus = app.verification.registryStatus || "verified";
+  const isRegVerified = regStatus === "verified";
+
+  // Build Department Cross-Verification Block
+  let regHtml = "";
+  if (isBirth) {
+    if (isRegVerified) {
+      regHtml = `
+      <div class="reg-card verified">
+        <div class="reg-head">
+          <span class="status status-success">Verified in Hospital Data</span>
+          <span style="font-size:9px;color:#15803d;font-weight:700">Hospital CRS Digital Node · Connected</span>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#166534">
+          Institutional Delivery Record Confirmed in Hospital Database
+        </div>
+        <div class="reg-grid">
+          <div><span>Hospital Name:</span> <b>${esc(reg.hospital)}</b></div>
+          <div><span>Child Full Name:</span> <b style="color:#15803d">${esc(reg.childName)} (100% Match)</b></div>
+          <div><span>Hospital Record UID:</span> <b>${esc(reg.hospitalRegNo)}</b></div>
+          <div><span>Date &amp; Time of Birth:</span> <b>${esc(reg.dob)} · Matched</b></div>
+          <div><span>Parents' Names:</span> <b>${esc(reg.parents)}</b></div>
+          <div><span>Attending Physician:</span> <b>${esc(reg.doctor)}</b></div>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:#166534;background:#dcfce7;padding:6px 10px;border-radius:6px">
+          <b>Verification Result:</b> Verified in Hospital Data. Institutional delivery entry confirmed and authenticated by Sahyadri Hospital Civil Registration Node.
+        </div>
+        ${canReviewApp(app) ? `
+        <div class="reg-actions">
+          <button class="btn btn-small btn-danger" data-action="toggle-hospital-check" data-id="${esc(app.id)}" data-status="failed">Simulate Mismatch / Not Found</button>
+          <button class="btn btn-small" data-action="recheck-hospital-check" data-id="${esc(app.id)}">Re-Check Hospital Node</button>
+        </div>` : ""}
+      </div>`;
+    } else {
+      regHtml = `
+      <div class="reg-card failed">
+        <div class="reg-head">
+          <span class="status status-danger">Hospital Data Verification Failed</span>
+          <span style="font-size:9px;color:#b91c1c;font-weight:700">Hospital CRS Digital Node · Mismatch</span>
+        </div>
+        <div class="reg-alert-box">
+          <div class="reg-alert-title">Hospital data doesn't verify this applicant</div>
+          <div class="reg-alert-desc">
+            No institutional delivery or birth admission record found in hospital digital ledger matching child "${esc(reg.childName)}" on date ${esc(reg.dob)}. The hospital records do not authenticate the submitted information.
+          </div>
+          <div class="reg-alert-warning">
+            Notice to Official: Government regulations prohibit issuing a Birth Certificate without positive verification in hospital data. You may request clarification or reject this application.
+          </div>
+        </div>
+        ${canReviewApp(app) ? `
+        <div class="reg-actions">
+          <button class="btn btn-small btn-primary" data-action="toggle-hospital-check" data-id="${esc(app.id)}" data-status="verified">Simulate Matching Hospital Record</button>
+        </div>` : ""}
+      </div>`;
+    }
+  } else {
+    regHtml = `
+      <div class="reg-card ${isRegVerified ? "verified" : "failed"}">
+        <div class="reg-head">
+          <span class="status ${isRegVerified ? "status-success" : "status-danger"}">${esc(app.verification.registryMessage)}</span>
+          <span style="font-size:9px;color:${isRegVerified ? "#15803d" : "#b91c1c"};font-weight:700">${esc(app.verification.registrySystem)}</span>
+        </div>
+        <div class="reg-grid">
+          ${Object.entries(reg).map(([k, v]) => `<div><span>${esc(k.charAt(0).toUpperCase() + k.slice(1))}:</span> <b>${esc(v)}</b></div>`).join("")}
+        </div>
+        ${canReviewApp(app) ? `
+        <div class="reg-actions">
+          <button class="btn btn-small" data-action="recheck-hospital-check" data-id="${esc(app.id)}">Re-Verify Registry API</button>
+        </div>` : ""}
+      </div>`;
+  }
+
+  // Build Attached PDF Document Table
+  const verifDocs = app.verification.documents || [];
+  const verifiedCount = verifDocs.filter(d => d.status === "verified").length;
+  const totalDocs = verifDocs.length;
+
+  const docsRows = verifDocs.map(d => `
+    <tr>
+      <td><span class="pdf-badge">PDF</span></td>
+      <td>
+        <div class="doc-name">${esc(d.name)}</div>
+        <div class="doc-meta">${esc(d.filename)}</div>
+      </td>
+      <td><span style="font-size:9px;color:var(--muted)">${esc(d.size)}</span></td>
+      <td>
+        <span class="status ${statusClass(d.status)}">${d.status === "verified" ? "Verified by Officer" : d.status === "flagged" ? "Flagged" : "Pending Review"}</span>
+        ${d.verifiedBy ? `<div style="font-size:8px;color:var(--muted);margin-top:2px">By ${esc(d.verifiedBy)}</div>` : ""}
+      </td>
+      <td>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="btn btn-small" data-action="open-pdf-viewer" data-app="${esc(app.id)}" data-doc="${esc(d.id)}">View PDF</button>
+          ${canReviewApp(app) ? `<button class="btn btn-small btn-primary" data-action="quick-verify-doc" data-app="${esc(app.id)}" data-doc="${esc(d.id)}">${d.status === "verified" ? "Verified" : "Verify"}</button>` : ""}
+        </div>
+      </td>
+    </tr>
+  `).join("");
 
   openModal(`Application Reference: ${esc(app.id)}`, `
  <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px">
@@ -938,9 +1535,51 @@ function showApplication(id) {
    <div><small class="muted">CURRENT STEP</small><div style="font-size:11px;font-weight:750;margin-top:2px">${esc(app.step)}</div></div>
  </div>
 
- <!-- Fetched Department Data Vault Section (Common Data & Documents) -->
- <div style="margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:8px">
-   <div style="font-size:11px;font-weight:800;color:#166534;margin-bottom:6px">1. Reused Common Vault Data (Consent Verified)</div>
+ <!-- 1. Official Department & Hospital Registry Verification Section -->
+ <div class="verif-box">
+   <div class="verif-header">
+     <div>
+       <div class="verif-title">1. Official Cross-System Registry Verification (${esc(app.department)})</div>
+       <div class="verif-sub">${isBirth ? "Official Hospital delivery and civil registry authentication" : "Cross-verifying applicant data against authoritative department registers"}</div>
+     </div>
+   </div>
+   ${regHtml}
+ </div>
+
+ <!-- 2. Attached Verification Documents in PDF Format Section -->
+ <div class="verif-box">
+   <div class="verif-header">
+     <div>
+       <div class="verif-title">2. Mandatory Verification Documents (PDF Inspection)</div>
+       <div class="verif-sub">Officials must inspect each document in PDF format before granting approval</div>
+     </div>
+     <div style="font-size:10px;font-weight:800;color:${verifiedCount === totalDocs ? "var(--green)" : "var(--amber)"}">
+       ${verifiedCount} of ${totalDocs} Documents Verified
+     </div>
+   </div>
+   <div class="table-wrap">
+     <table class="doc-table">
+       <thead>
+         <tr>
+           <th>Format</th>
+           <th>Document Title &amp; File</th>
+           <th>Size</th>
+           <th>Status</th>
+           <th>Action</th>
+         </tr>
+       </thead>
+       <tbody>${docsRows}</tbody>
+     </table>
+   </div>
+   ${canReviewApp(app) ? `
+   <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+     <button class="btn btn-small btn-dark" data-action="verify-all-docs" data-id="${esc(app.id)}">Verify All Documents</button>
+   </div>` : ""}
+ </div>
+
+ <!-- 3. Reused Common Vault Data -->
+ <div style="margin-top:12px;background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:8px">
+   <div style="font-size:11px;font-weight:800;color:#166534;margin-bottom:6px">3. Reused Common Vault Data (Consent Verified)</div>
    <div class="grid" style="grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#14532d">
      <div><b>Aadhaar UID:</b> ${esc(profile.aadhaarNo || "Verified")}</div>
      <div><b>PAN Number:</b> ${esc(profile.panNo || "Verified")}</div>
@@ -949,15 +1588,12 @@ function showApplication(id) {
      <div><b>Domicile Cert No:</b> ${esc(profile.domicileNo || "DOM-2025-8821")}</div>
      <div><b>DBT Bank Account:</b> ${esc(profile.bankAccount || "Verified")} (${esc(profile.bankName || "SBI")})</div>
    </div>
-   <div style="font-size:9px;color:#15803d;margin-top:6px;border-top:1px dashed #bbf7d0;padding-top:4px">
-     <b>Attached Verified Vault Docs:</b> ${esc(docs.aadhaarDoc || "Aadhaar.pdf")}, ${esc(docs.panDoc || "PAN.pdf")}, ${esc(docs.addressDoc || "Address_Proof.pdf")}
-   </div>
  </div>
 
- <!-- Submitted Service-Specific Intake Details -->
+ <!-- 4. Submitted Service-Specific Intake Details -->
  ${app.serviceDetails ? `
  <div style="margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:8px">
-   <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px">2. Service-Specific Intake Details (${esc(app.department)})</div>
+   <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px">4. Service-Specific Intake Details (${esc(app.department)})</div>
    <div class="grid" style="grid-template-columns:1fr 1fr;gap:6px;font-size:10px;color:#1e3a8a">
      ${Object.entries(app.serviceDetails).map(([k, v]) => `<div><b>${esc(k.charAt(0).toUpperCase() + k.slice(1))}:</b> ${esc(v)}</div>`).join("")}
    </div>
@@ -1161,24 +1797,151 @@ document.addEventListener("click", e => {
       });
     }
 
-    state.applications.unshift({
+    const newApp = {
       id, service: service.name, department: service.department, applicant, email,
       date: new Date().toISOString().slice(0, 10), status: "Submitted", step: "Application received",
       serviceDetails, note: document.getElementById("appNote")?.value.trim() || "", history: ["Application received", "Consent recorded"]
-    });
+    };
+    ensureAppVerification(newApp);
+    state.applications.unshift(newApp);
     logAudit("Submitted service request", id, applicant);
     save(); closeModal(); go("applications"); toast("Request submitted! Reference: " + id);
+  }
+
+  if (a === "open-pdf-viewer") {
+    openPdfDocumentViewer(el.dataset.app, el.dataset.doc);
+    return;
+  }
+
+  if (a === "pdf-action-verify") {
+    const app = state.applications.find(x => x.id === el.dataset.app);
+    if (!app) return;
+    ensureAppVerification(app);
+    const doc = app.verification.documents.find(d => d.id === el.dataset.doc);
+    if (doc) {
+      doc.status = "verified";
+      doc.verifiedBy = currentUser.name;
+      doc.verifiedAt = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      logAudit("Verified PDF document: " + doc.filename, app.id);
+      save();
+      openPdfDocumentViewer(app.id, doc.id);
+      toast("Document marked as Verified by " + currentUser.name);
+    }
+    return;
+  }
+
+  if (a === "pdf-action-flag") {
+    const app = state.applications.find(x => x.id === el.dataset.app);
+    if (!app) return;
+    ensureAppVerification(app);
+    const doc = app.verification.documents.find(d => d.id === el.dataset.doc);
+    if (doc) {
+      doc.status = "flagged";
+      doc.verifiedBy = currentUser.name;
+      doc.verifiedAt = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      logAudit("Flagged discrepancy in document: " + doc.filename, app.id);
+      save();
+      openPdfDocumentViewer(app.id, doc.id);
+      toast("Discrepancy flagged on document.");
+    }
+    return;
+  }
+
+  if (a === "pdf-action-back") {
+    showApplication(el.dataset.app);
+    return;
+  }
+
+  if (a === "quick-verify-doc") {
+    const app = state.applications.find(x => x.id === el.dataset.app);
+    if (!app) return;
+    ensureAppVerification(app);
+    const doc = app.verification.documents.find(d => d.id === el.dataset.doc);
+    if (!doc) return;
+    doc.status = doc.status === "verified" ? "pending" : "verified";
+    doc.verifiedBy = doc.status === "verified" ? currentUser.name : "";
+    doc.verifiedAt = doc.status === "verified" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+    logAudit(doc.status === "verified" ? "Verified document: " + doc.filename : "Cleared verification: " + doc.filename, app.id);
+    save();
+    showApplication(app.id);
+    toast(doc.status === "verified" ? "Document marked as Verified." : "Verification cleared.");
+    return;
+  }
+
+  if (a === "verify-all-docs") {
+    const app = state.applications.find(x => x.id === el.dataset.id);
+    if (!app) return;
+    ensureAppVerification(app);
+    app.verification.documents.forEach(d => {
+      d.status = "verified";
+      d.verifiedBy = currentUser.name;
+      d.verifiedAt = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    });
+    logAudit("Verified all attached PDF documents", app.id);
+    save();
+    showApplication(app.id);
+    toast("All attached documents marked as Verified by Officer.");
+    return;
+  }
+
+  if (a === "toggle-hospital-check") {
+    const app = state.applications.find(x => x.id === el.dataset.id);
+    if (!app) return;
+    ensureAppVerification(app);
+    app.verification.registryStatus = el.dataset.status;
+    if (el.dataset.status === "verified") {
+      app.verification.registryMessage = "Verified in Hospital Data";
+      logAudit("Hospital verification status: Verified", app.id);
+      toast("Hospital data verified: Institutional delivery record matched.");
+    } else {
+      app.verification.registryMessage = "Hospital data doesn't verify this applicant";
+      logAudit("Hospital verification status: Failed / Not Found", app.id);
+      toast("Verification failed: Hospital data doesn't verify this applicant.");
+    }
+    save();
+    showApplication(app.id);
+    return;
+  }
+
+  if (a === "recheck-hospital-check") {
+    const app = state.applications.find(x => x.id === el.dataset.id);
+    if (!app) return;
+    toast("Pinging Hospital Civil Registration System node... Record matched (142ms).");
+    return;
   }
 
   if (a === "decision") {
     const app = state.applications.find(x => x.id === el.dataset.id);
     if (!app) return;
-    if (!canReview() || (!isAdmin() && app.department !== currentUser.department)) { toast("Permission denied."); return; }
+    if (!canReviewApp(app)) { toast("Permission denied."); return; }
+    ensureAppVerification(app);
     const decision = el.dataset.decision;
+
+    if (decision === "Approved") {
+      // 1. Hospital / Registry Verification Guard
+      if (app.verification && app.verification.registryStatus === "failed") {
+        alert("Cannot Approve Application!\n\nHospital data doesn't verify this applicant.\nOfficial regulations prohibit approval without positive hospital delivery verification. Please reject or request clarification from the applicant.");
+        return;
+      }
+
+      // 2. Unverified Documents Check
+      const unverified = (app.verification?.documents || []).filter(d => d.status !== "verified");
+      if (unverified.length > 0) {
+        if (!confirm("Attention Officer: " + unverified.length + " attached document(s) have not been checked/verified yet.\n\nDo you want to confirm that all required documents are verified and proceed with Official Approval?")) {
+          return;
+        }
+        app.verification.documents.forEach(d => {
+          d.status = "verified";
+          d.verifiedBy = currentUser.name;
+          d.verifiedAt = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        });
+      }
+    }
+
     if (decision === "Rejected" && !confirm("Reject this application?")) return;
     app.status = decision;
     app.step = decision === "Approved" ? "Completed" : "Decision recorded";
-    app.note = decision === "Rejected" ? "Rejected by " + currentUser.name : "Approved by " + currentUser.name;
+    app.note = decision === "Rejected" ? "Rejected by " + currentUser.name : "Approved by " + currentUser.name + " (Verified & Certified)";
     app.history = app.history || [];
     app.history.push(decision + " by " + currentUser.name);
     logAudit(decision + " application", app.id);
@@ -1278,8 +2041,10 @@ document.addEventListener("change", e => {
     save();
     toast(el.checked ? "Consent enabled: Information will auto pre-fill." : "Consent disabled: Auto pre-fill turned off.");
   }
-  if (el.id === "statusFilter") {
-    const apps = visibleApps().filter(a => !el.value || a.status === el.value);
+  if (el.id === "statusFilter" || el.id === "deptFilter") {
+    const sVal = document.getElementById("statusFilter")?.value || "";
+    const dVal = document.getElementById("deptFilter")?.value || "";
+    const apps = visibleApps().filter(a => (!sVal || a.status === sVal) && (!dVal || a.department === dVal));
     document.getElementById("applicationTable").innerHTML = rowsApps(apps);
   }
 });
