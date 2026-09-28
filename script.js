@@ -78,20 +78,19 @@ const defaultState = {
 
 function clone(x) { return JSON.parse(JSON.stringify(x)); }
 function loadState() {
-  let st;
   try {
     const loaded = JSON.parse(localStorage.getItem(KEY) || "{}");
-    st = { ...clone(defaultState), ...loaded };
+    return { ...clone(defaultState), ...loaded };
   } catch {
-    st = clone(defaultState);
+    return clone(defaultState);
   }
-  if (st && st.applications) {
-    st.applications.forEach(a => ensureAppVerification(a));
-  }
-  return st;
 }
 
 let state = loadState(), currentUser = null, currentPage = "dashboard", toastTimer;
+
+if (state && state.applications) {
+  state.applications.forEach(a => ensureAppVerification(a));
+}
 
 function save() {
   localStorage.setItem(KEY, JSON.stringify(state));
@@ -104,6 +103,7 @@ function esc(x) {
 
 function toast(msg) {
   const t = document.getElementById("toast");
+  if (!t) return;
   t.textContent = msg;
   t.classList.add("show");
   clearTimeout(toastTimer);
@@ -133,6 +133,7 @@ function canReviewApp(app) {
 
 function visibleApps() {
   if (!currentUser) return [];
+  if (!state || !state.applications) return [];
   if (isAdmin()) return state.applications;
   if (isReviewer()) {
     if (!currentUser.department || currentUser.department === "Government of Maharashtra" || currentUser.department === "All Departments") {
@@ -140,14 +141,21 @@ function visibleApps() {
     }
     return state.applications.filter(a => a.department === currentUser.department);
   }
-  return state.applications.filter(a => a.email.toLowerCase() === currentUser.email.toLowerCase() || a.applicant.toLowerCase() === currentUser.name.toLowerCase());
+  const uEmail = (currentUser.email || "").toLowerCase();
+  const uName = (currentUser.name || "").toLowerCase();
+  return state.applications.filter(a => {
+    const aEmail = (a.email || "").toLowerCase();
+    const aApplicant = (a.applicant || "").toLowerCase();
+    return (uEmail && aEmail === uEmail) || (uName && aApplicant === uName);
+  });
 }
 
 /* Retrieve or initialize live profile vault for any user by email */
 function getUserProfile(userEmail) {
   const email = (userEmail || currentUser?.email || "").toLowerCase();
-  if (!state.userProfiles[email]) {
-    state.userProfiles[email] = {
+  const profiles = (typeof state !== "undefined" && state && state.userProfiles) ? state.userProfiles : defaultUserProfiles;
+  if (!profiles[email]) {
+    profiles[email] = {
       fatherName: "", motherName: "", dob: "", gender: "Male", maritalStatus: "Unmarried", religion: "", category: "General",
       phone: "+91 98765 43210", email: email,
       aadhaarNo: "4821 " + Math.floor(1000 + Math.random() * 9000) + " " + Math.floor(1000 + Math.random() * 9000),
@@ -172,7 +180,7 @@ function getUserProfile(userEmail) {
       }
     };
   }
-  return state.userProfiles[email];
+  return profiles[email];
 }
 
 function logAudit(action, resource, actor = currentUser?.name || "System") {
@@ -278,6 +286,9 @@ function toggleAuthMode() {
     selectRole(role);
   }
 }
+
+window.selectRole = selectRole;
+window.toggleAuthMode = toggleAuthMode;
 
 /* Handle Auth Form Submit (Sign In or Sign Up) */
 document.getElementById("authForm").addEventListener("submit", e => {

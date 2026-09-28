@@ -43,9 +43,9 @@
 
       <!-- 3-Role Access Tabs -->
       <div class="auth-tabs" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 20px;">
-        <button class="active" id="roleCitizenBtn" onclick="selectRole('citizen')">Citizen</button>
-        <button id="roleReviewerBtn" onclick="selectRole('reviewer')">Reviewer</button>
-        <button id="roleAdminBtn" onclick="selectRole('admin')">Admin</button>
+        <button type="button" class="active" id="roleCitizenBtn" onclick="selectRole('citizen')">Citizen</button>
+        <button type="button" id="roleReviewerBtn" onclick="selectRole('reviewer')">Reviewer</button>
+        <button type="button" id="roleAdminBtn" onclick="selectRole('admin')">Admin</button>
       </div>
 
       <form id="authForm">
@@ -80,7 +80,7 @@
           <input id="authPassword" type="password" required placeholder="Enter password">
         </div>
 
-        <button class="btn btn-primary auth-submit" id="authSubmit" style="width:100%; margin-top:10px;">Sign In as Citizen -&gt;</button>
+        <button type="submit" class="btn btn-primary auth-submit" id="authSubmit" style="width:100%; margin-top:10px;">Sign In as Citizen -&gt;</button>
       </form>
 
       <!-- Switch between Sign In and Sign Up -->
