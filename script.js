@@ -1,4 +1,4 @@
-const KEY = "setu-gov-v10";
+const KEY = "setu-gov-v11";
 
 const defaultUsers = [
   { id: "u-admin", name: "Platform Admin", email: "admin@setu.gov.in", password: "Setu@2026", role: "admin", department: "Government of Maharashtra" },
@@ -61,7 +61,7 @@ const defaultState = {
     { id: "SET-2026-1048", service: "Income Certificate", department: "Revenue Department", applicant: "Aarav Patil", email: "citizen@example.com", date: "2026-03-14", status: "Approved", step: "Completed", note: "Verified against revenue digital records.", serviceDetails: { occupation: "Agriculture & Service", incomeSource: "Salaried & Farm Income", annualIncome: "120000" }, history: ["Application received", "Identity check completed", "Department verification completed", "Approved"] },
     { id: "SET-2026-1047", service: "Student Scholarship", department: "Education Department", applicant: "Sana Shaikh", email: "sana@example.com", date: "2026-03-13", status: "Information requested", step: "Document validation", note: "Please provide current academic year enrollment proof.", serviceDetails: { collegeName: "COEP Pune", courseName: "B.Tech Computer Science", semester: "Semester 6", marks: "88.5%" }, history: ["Application received", "Document validation", "Additional information requested"] },
     { id: "SET-2026-1046", service: "Business Registration", department: "Industries Department", applicant: "Meera Joshi", email: "meera@example.com", date: "2026-03-12", status: "Approved", step: "Completed", note: "Registration issued.", serviceDetails: { businessName: "Joshi IT Solutions Pvt Ltd", businessType: "Private Limited", investment: "500000" }, history: ["Application received", "Department verification", "Approved"] },
-    { id: "SET-2026-1045", service: "Birth Certificate", department: "Municipal Services", applicant: "Rohan Deshmukh", email: "rohan@example.com", date: "2026-03-11", status: "Submitted", step: "Application received", note: "", serviceDetails: { childName: "Advait Deshmukh", birthPlace: "Sahyadri Hospital Pune", birthDate: "2026-02-10" }, history: ["Application received"] },
+    { id: "SET-2026-1045", service: "Birth Certificate", department: "Municipal Services", applicant: "Krushna Tukaram Bhosale", email: "krushna@example.com", date: "2026-03-11", status: "Submitted", step: "Application received", note: "", serviceDetails: { child_name: "Pravin Krushna Bhosale", child_gender: "Male", child_dob: "2026-02-10 04:30", hospital: "Sassoon General Hospital Pune", hospital_reg_no: "B20260950347004762", mother_name: "Sunita Krushna Bhosale", mother_aadhaar: "XXXX-XXXX-4512", father_name: "Krushna Tukaram Bhosale", father_aadhaar: "XXXX-XXXX-9036", birth_address: "Flat No 402, Shivshankar Heights, Near Sassoon Road, Station Area, Pune - 411001", perm_address: "At Post Koregaon, Taluka Haveli, District Pune - 412207" }, history: ["Application received"] },
     { id: "SET-2026-1044", service: "Senior Citizen Pension", department: "Social Justice Department", applicant: "Leela Kulkarni", email: "leela@example.com", date: "2026-03-10", status: "In review", step: "Eligibility check", note: "", serviceDetails: { pensionType: "Indira Gandhi National Old Age Pension", spouseStatus: "Widowed" }, history: ["Application received", "Eligibility check in progress"] }
   ],
   services: defaultServices,
@@ -1729,79 +1729,479 @@ window.selectPickerMinute = selectPickerMinute;
 window.clearPickerDateTime = clearPickerDateTime;
 window.setPickerToday = setPickerToday;
 
+/* Dynamic Service-Specific Supporting Documents Engine (Government_Services_Required_Documents Reference) */
+function getServiceRequiredDocuments(serviceId, profile, hasConsent) {
+  const vault = profile?.vaultDocuments || {};
+  switch (serviceId) {
+    case "scholarship":
+      return [
+        { id: "sch_aadhaar", title: "Student Aadhaar Card (UIDAI Verified)", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "sch_caste", title: "Caste Certificate & Caste Validity", category: "Social Category Proof", required: false, prefilledFile: vault.casteDoc || "Caste_Certificate.pdf", fallbackFile: "Caste_Certificate.pdf" },
+        { id: "sch_income", title: "Tahsildar Family Income Certificate", category: "Income Proof", required: true, prefilledFile: vault.incomeDoc || "Income_Certificate_Verified.pdf", fallbackFile: "Income_Certificate_Verified.pdf" },
+        { id: "sch_domicile", title: "Domicile & Nationality Certificate (MH)", category: "Domicile Proof", required: true, prefilledFile: vault.domicileDoc || "Domicile_Certificate.pdf", fallbackFile: "Domicile_Certificate.pdf" },
+        { id: "sch_marksheet", title: "Previous Semester / Year Marksheet", category: "Academic Proof", required: true, prefilledFile: vault.educationDoc || "Semester_Marksheet_Score.pdf", fallbackFile: "Semester_Marksheet_Score.pdf" },
+        { id: "sch_allotment", title: "CAP Round College Allotment Letter", category: "Admission Proof", required: true, prefilledFile: vault.admissionDoc || "CAP_Round_Allotment_Letter.pdf", fallbackFile: "CAP_Round_Allotment_Letter.pdf" },
+        { id: "sch_fee_receipt", title: "College Fee Paid Receipt (Current Year)", category: "Fee Receipt", required: true, prefilledFile: vault.feeReceiptDoc || "College_Fee_Receipt_Paid.pdf", fallbackFile: "College_Fee_Receipt_Paid.pdf" },
+        { id: "sch_passbook", title: "Student Bank Passbook / Cheque (DBT)", category: "Bank Details", required: true, prefilledFile: vault.passbookDoc || "Bank_Passbook_Copy.pdf", fallbackFile: "Bank_Passbook_Copy.pdf" },
+        { id: "sch_hostel", title: "Hostel Warden Certificate / Rent Agreement", category: "Hostel / Disability", required: false, prefilledFile: vault.udidDoc || "Hostel_Warden_Certificate.pdf", fallbackFile: "Hostel_Warden_Certificate.pdf" }
+      ];
+    case "birth":
+      return [
+        { id: "birth_discharge", title: "Hospital Discharge Summary & Birth Report", category: "Institutional Delivery", required: true, prefilledFile: vault.birthDoc || "Hospital_Discharge_Summary_Birth_Report.pdf", fallbackFile: "Hospital_Discharge_Summary_Birth_Report.pdf" },
+        { id: "birth_slip", title: "Hospital IPD Admission & Delivery Slip", category: "Hospital Admission", required: true, prefilledFile: "Hospital_Delivery_Admission_Slip.pdf", fallbackFile: "Hospital_Delivery_Admission_Slip.pdf" },
+        { id: "birth_joint_aadhaar", title: "Parents Joint Identity & Aadhaar Proof", category: "Parents Identity", required: true, prefilledFile: vault.aadhaarDoc || "Parents_Joint_Aadhaar_Proof.pdf", fallbackFile: "Parents_Joint_Aadhaar_Proof.pdf" },
+        { id: "birth_address", title: "Parents Residential Address Proof", category: "Address Proof", required: true, prefilledFile: vault.addressDoc || "Electricity_Bill_Address.pdf", fallbackFile: "Electricity_Bill_Address.pdf" }
+      ];
+    case "income":
+      return [
+        { id: "inc_aadhaar", title: "Applicant & Family Head Aadhaar Card", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "inc_address", title: "Address Proof (Ration / Electricity / Tax)", category: "Address Proof", required: true, prefilledFile: vault.addressDoc || "Electricity_Bill_Address.pdf", fallbackFile: "Electricity_Bill_Address.pdf" },
+        { id: "inc_salary", title: "Salary Slip / Form 16 / Talathi Income Report", category: "Income Proof", required: true, prefilledFile: vault.incomeDoc || "Talathi_Verified_Income_Report.pdf", fallbackFile: "Talathi_Verified_Income_Report.pdf" },
+        { id: "inc_land", title: "7/12 & 8A Agricultural Land Extract", category: "Land Record", required: false, prefilledFile: vault.landDoc || "MahaBhulekh_7_12_Extract.pdf", fallbackFile: "MahaBhulekh_7_12_Extract.pdf" },
+        { id: "inc_ration", title: "Ration Card Family Unit Copy", category: "Family Proof", required: true, prefilledFile: vault.rationDoc || "Ration_Card_Family.pdf", fallbackFile: "Ration_Card_Family.pdf" },
+        { id: "inc_photo", title: "Passport Size Photograph", category: "Photo Proof", required: true, prefilledFile: vault.photoDoc || "Applicant_Photo_ID_Proof.pdf", fallbackFile: "Applicant_Photo_ID_Proof.pdf" }
+      ];
+    case "business":
+      return [
+        { id: "biz_pan", title: "Business / Proprietor / Director PAN Card", category: "Tax ID", required: true, prefilledFile: vault.panDoc || "PAN_Card_Verified.pdf", fallbackFile: "PAN_Card_Verified.pdf" },
+        { id: "biz_aadhaar", title: "Proprietor / Managing Director Aadhaar", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "biz_premises", title: "Business Premises Proof (Electricity / Tax)", category: "Premises Proof", required: true, prefilledFile: vault.addressDoc || "Business_Premises_Electricity_Bill.pdf", fallbackFile: "Business_Premises_Electricity_Bill.pdf" },
+        { id: "biz_rent", title: "Registered Rent Agreement & Owner NOC", category: "Tenancy Proof", required: true, prefilledFile: "Registered_Rent_Agreement_NOC.pdf", fallbackFile: "Registered_Rent_Agreement_NOC.pdf" },
+        { id: "biz_incorporation", title: "Certificate of Incorporation / Partnership Deed", category: "Legal Entity", required: true, prefilledFile: "Certificate_of_Incorporation_MOA.pdf", fallbackFile: "Certificate_of_Incorporation_MOA.pdf" },
+        { id: "biz_bank", title: "Current Bank Account Cancelled Cheque", category: "Bank Proof", required: true, prefilledFile: vault.passbookDoc || "Bank_Cancelled_Cheque.pdf", fallbackFile: "Bank_Cancelled_Cheque.pdf" },
+        { id: "biz_photo", title: "Authorized Signatory Photograph", category: "Photo Proof", required: true, prefilledFile: vault.photoDoc || "Applicant_Photo_ID_Proof.pdf", fallbackFile: "Applicant_Photo_ID_Proof.pdf" }
+      ];
+    case "pension":
+      return [
+        { id: "pen_aadhaar", title: "Applicant Aadhaar Card (Aadhaar Seeded)", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "pen_age", title: "Age Proof (School Leaving / Birth / Medical)", category: "Age Proof", required: true, prefilledFile: vault.birthDoc || "School_Leaving_Age_Proof.pdf", fallbackFile: "School_Leaving_Age_Proof.pdf" },
+        { id: "pen_domicile", title: "Continuous 15-Year Domicile / Residence Proof", category: "Domicile Proof", required: true, prefilledFile: vault.domicileDoc || "Domicile_Certificate.pdf", fallbackFile: "Domicile_Certificate.pdf" },
+        { id: "pen_income", title: "Tahsildar Income Proof / BPL Card Copy", category: "Eligibility Proof", required: true, prefilledFile: vault.incomeDoc || "Income_Certificate_Verified.pdf", fallbackFile: "Income_Certificate_Verified.pdf" },
+        { id: "pen_passbook", title: "DBT-Enabled Bank Passbook Copy", category: "Bank Details", required: true, prefilledFile: vault.passbookDoc || "Bank_Passbook_Copy.pdf", fallbackFile: "Bank_Passbook_Copy.pdf" },
+        { id: "pen_photo", title: "Recent Passport Size Photograph", category: "Photo Proof", required: true, prefilledFile: vault.photoDoc || "Applicant_Photo_ID_Proof.pdf", fallbackFile: "Applicant_Photo_ID_Proof.pdf" },
+        { id: "pen_spouse", title: "Spouse Death Certificate / Disability Proof", category: "Special Support", required: false, prefilledFile: "Spouse_Death_Certificate_Proof.pdf", fallbackFile: "Spouse_Death_Certificate_Proof.pdf" }
+      ];
+    case "residence":
+      return [
+        { id: "res_aadhaar", title: "Applicant Aadhaar Card", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "res_voter", title: "Voter ID Card / Indian Passport", category: "Citizenship Proof", required: true, prefilledFile: vault.voterDoc || "Voter_ID_Card.pdf", fallbackFile: "Voter_ID_Card.pdf" },
+        { id: "res_ration", title: "Ration Card (Displaying Applicant Name)", category: "Family Proof", required: true, prefilledFile: vault.rationDoc || "Ration_Card_Family.pdf", fallbackFile: "Ration_Card_Family.pdf" },
+        { id: "res_electricity", title: "Electricity Bill / Municipal Tax Receipts", category: "Address Proof", required: true, prefilledFile: vault.addressDoc || "Electricity_Bill_Address.pdf", fallbackFile: "Electricity_Bill_Address.pdf" },
+        { id: "res_lc", title: "School / College Leaving Certificate (MH)", category: "Schooling Proof", required: true, prefilledFile: vault.educationDoc || "School_Leaving_Certificate.pdf", fallbackFile: "School_Leaving_Certificate.pdf" },
+        { id: "res_land", title: "7/12 Extract or City Survey PR Card", category: "Property Proof", required: false, prefilledFile: vault.landDoc || "MahaBhulekh_7_12_Extract.pdf", fallbackFile: "MahaBhulekh_7_12_Extract.pdf" }
+      ];
+    case "caste":
+      return [
+        { id: "caste_aadhaar", title: "Applicant Aadhaar Card", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "caste_lc_self", title: "Primary School Leaving Certificate (Caste)", category: "Self Schooling", required: true, prefilledFile: vault.educationDoc || "School_Leaving_Certificate.pdf", fallbackFile: "School_Leaving_Certificate.pdf" },
+        { id: "caste_father_lc", title: "Father / Grandfather School Leaving Extract", category: "Ancestral Proof", required: true, prefilledFile: "Father_School_Leaving_Caste_Extract.pdf", fallbackFile: "Father_School_Leaving_Caste_Extract.pdf" },
+        { id: "caste_rel_cert", title: "Paternal Relative Caste Certificate / Validity", category: "Relative Record", required: true, prefilledFile: vault.casteDoc || "Caste_Certificate.pdf", fallbackFile: "Caste_Certificate.pdf" },
+        { id: "caste_genealogy", title: "Paternal Genealogic Tree Affidavit (Vanshaval)", category: "Affidavit", required: true, prefilledFile: "Genealogic_Family_Tree_Affidavit.pdf", fallbackFile: "Genealogic_Family_Tree_Affidavit.pdf" },
+        { id: "caste_domicile", title: "Family Residence Proof Prior to Deemed Date", category: "Deemed Proof", required: true, prefilledFile: vault.domicileDoc || "Domicile_Certificate.pdf", fallbackFile: "Domicile_Certificate.pdf" }
+      ];
+    case "trade":
+      return [
+        { id: "trade_pan", title: "Applicant / Firm PAN Card", category: "Tax Proof", required: true, prefilledFile: vault.panDoc || "PAN_Card_Verified.pdf", fallbackFile: "PAN_Card_Verified.pdf" },
+        { id: "trade_aadhaar", title: "Trade Owner / Partner Aadhaar Card", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "trade_tax", title: "Premises Ownership / Property Tax Challan", category: "Premises Proof", required: true, prefilledFile: vault.addressDoc || "Municipal_Property_Tax_Challan.pdf", fallbackFile: "Municipal_Property_Tax_Challan.pdf" },
+        { id: "trade_rent", title: "Registered Rent Agreement & Owner NOC", category: "Tenancy Proof", required: true, prefilledFile: "Registered_Rent_Agreement_NOC.pdf", fallbackFile: "Registered_Rent_Agreement_NOC.pdf" },
+        { id: "trade_shop_act", title: "Shop & Establishment (Gumasta) Copy", category: "Registration", required: true, prefilledFile: "Gumasta_Shop_Act_Registration.pdf", fallbackFile: "Gumasta_Shop_Act_Registration.pdf" },
+        { id: "trade_blueprint", title: "Premises Floor Blueprint & Layout Plan", category: "Premises Layout", required: true, prefilledFile: "Shop_Floor_Layout_Blueprint.pdf", fallbackFile: "Shop_Floor_Layout_Blueprint.pdf" },
+        { id: "trade_fire_fssai", title: "Fire Safety NOC / FSSAI Food Licence", category: "Compliance", required: false, prefilledFile: "Fire_Safety_NOC_Compliance.pdf", fallbackFile: "Fire_Safety_NOC_Compliance.pdf" }
+      ];
+    case "water":
+      return [
+        { id: "water_aadhaar", title: "Property Owner Aadhaar Card", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "water_pr_card", title: "City Survey Extract (PR Card) / Sale Deed", category: "Ownership Proof", required: true, prefilledFile: "City_Survey_PR_Card_Sale_Deed.pdf", fallbackFile: "City_Survey_PR_Card_Sale_Deed.pdf" },
+        { id: "water_tax", title: "Latest Municipal Property Tax Paid Receipt", category: "Tax Clearance", required: true, prefilledFile: "Property_Tax_No_Dues_Challan.pdf", fallbackFile: "Property_Tax_No_Dues_Challan.pdf" },
+        { id: "water_sanction", title: "Sanctioned Building Plan & Occupancy Cert (OC)", category: "Sanction Plan", required: true, prefilledFile: "Building_Sanction_Plan_OC.pdf", fallbackFile: "Building_Sanction_Plan_OC.pdf" },
+        { id: "water_plumber", title: "Licensed Plumber Layout & Estimation Cert", category: "Technical Layout", required: true, prefilledFile: "Licensed_Plumber_Layout_Certificate.pdf", fallbackFile: "Licensed_Plumber_Layout_Certificate.pdf" },
+        { id: "water_society", title: "Society NOC / Co-owners Consent Letter", category: "Society NOC", required: false, prefilledFile: "Society_NOC_Water_Connection.pdf", fallbackFile: "Society_NOC_Water_Connection.pdf" }
+      ];
+    case "ration":
+      return [
+        { id: "ration_old", title: "Existing Ration Card Copy / Deletion Certificate", category: "Current Card", required: true, prefilledFile: vault.rationDoc || "Ration_Card_Family.pdf", fallbackFile: "Ration_Card_Family.pdf" },
+        { id: "ration_family_aadhaar", title: "Aadhaar Cards of All Family Members", category: "Family Identity", required: true, prefilledFile: vault.aadhaarDoc || "All_Family_Members_Aadhaar_Cards.pdf", fallbackFile: "All_Family_Members_Aadhaar_Cards.pdf" },
+        { id: "ration_residence", title: "Current Residential Address Proof", category: "Address Proof", required: true, prefilledFile: vault.addressDoc || "Electricity_Bill_Address.pdf", fallbackFile: "Electricity_Bill_Address.pdf" },
+        { id: "ration_income", title: "Tahsildar Income Certificate / BPL Proof", category: "Income Proof", required: true, prefilledFile: vault.incomeDoc || "Income_Certificate_Verified.pdf", fallbackFile: "Income_Certificate_Verified.pdf" },
+        { id: "ration_lpg", title: "LPG Gas Connection Booklet / SV Voucher", category: "Fuel Proof", required: true, prefilledFile: "LPG_Gas_Connection_Voucher.pdf", fallbackFile: "LPG_Gas_Connection_Voucher.pdf" },
+        { id: "ration_passbook", title: "Head of Family Bank Passbook Copy", category: "Bank Details", required: true, prefilledFile: vault.passbookDoc || "Bank_Passbook_Copy.pdf", fallbackFile: "Bank_Passbook_Copy.pdf" }
+      ];
+    case "driving":
+      return [
+        { id: "dl_copy", title: "Original Driving Licence (Front & Back)", category: "Current DL", required: true, prefilledFile: "Original_Driving_Licence_Copy.pdf", fallbackFile: "Original_Driving_Licence_Copy.pdf" },
+        { id: "dl_aadhaar", title: "Applicant Aadhaar Card", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "dl_dest_address", title: "New Residence Address Proof (Destination)", category: "Destination Proof", required: true, prefilledFile: "Destination_Address_Proof.pdf", fallbackFile: "Destination_Address_Proof.pdf" },
+        { id: "dl_medical", title: "Medical Fitness Certificate (Form 1-A)", category: "Medical Fitness", required: false, prefilledFile: "Medical_Fitness_Form_1A.pdf", fallbackFile: "Medical_Fitness_Form_1A.pdf" },
+        { id: "dl_challan", title: "Traffic Police Challan Clearance / No Dues", category: "Challan Clearance", required: true, prefilledFile: "Traffic_Challan_No_Dues_Report.pdf", fallbackFile: "Traffic_Challan_No_Dues_Report.pdf" },
+        { id: "dl_photo", title: "Passport Photo & Specimen Signature", category: "Photo & Sign", required: true, prefilledFile: vault.photoDoc || "Applicant_Photo_ID_Proof.pdf", fallbackFile: "Applicant_Photo_ID_Proof.pdf" }
+      ];
+    case "property":
+      return [
+        { id: "prop_sale_deed", title: "Registered Sale Deed / Gift Deed (Index II)", category: "Title Deed", required: true, prefilledFile: "Registered_Sale_Deed_Index_II.pdf", fallbackFile: "Registered_Sale_Deed_Index_II.pdf" },
+        { id: "prop_tax_dues", title: "Latest Property Tax Paid Challan & No Dues", category: "Tax Clearance", required: true, prefilledFile: "Property_Tax_No_Dues_Challan.pdf", fallbackFile: "Property_Tax_No_Dues_Challan.pdf" },
+        { id: "prop_712_pr", title: "7/12 Extract or City Survey PR Card", category: "Land / PR Card", required: true, prefilledFile: vault.landDoc || "MahaBhulekh_7_12_Extract.pdf", fallbackFile: "MahaBhulekh_7_12_Extract.pdf" },
+        { id: "prop_mutation", title: "Notice of Transfer / Mutation Application Form", category: "Statutory Form", required: true, prefilledFile: "Notice_of_Transfer_Mutation_Form.pdf", fallbackFile: "Notice_of_Transfer_Mutation_Form.pdf" },
+        { id: "prop_heir", title: "Legal Heir / Family Tree Affidavit (Vanshaval)", category: "Affidavit", required: false, prefilledFile: "Legal_Heir_Affidavit.pdf", fallbackFile: "Legal_Heir_Affidavit.pdf" },
+        { id: "prop_aadhaar", title: "Transferee & Transferor Aadhaar / PAN Copies", category: "Parties KYC", required: true, prefilledFile: vault.aadhaarDoc || "Transferee_Aadhaar_PAN_Copies.pdf", fallbackFile: "Transferee_Aadhaar_PAN_Copies.pdf" }
+      ];
+    default:
+      return [
+        { id: "gen_aadhaar", title: "Aadhaar Card (UIDAI Verified)", category: "Identity Proof", required: true, prefilledFile: vault.aadhaarDoc || "Aadhaar_Card_Verified.pdf", fallbackFile: "Aadhaar_Card_Verified.pdf" },
+        { id: "gen_address", title: "Address Proof Document", category: "Address Proof", required: true, prefilledFile: vault.addressDoc || "Electricity_Bill_Address.pdf", fallbackFile: "Electricity_Bill_Address.pdf" },
+        { id: "gen_primary", title: "Service Specific Supporting Document", category: "Service Document", required: true, prefilledFile: "Service_Supporting_Document.pdf", fallbackFile: "Service_Supporting_Document.pdf" }
+      ];
+  }
+}
+
+/* Service Documents Section Renderer with Prefill & Manual Upload Options */
+function renderServiceDocumentsSection(serviceId, profile, hasConsent) {
+  const reqDocs = getServiceRequiredDocuments(serviceId, profile, hasConsent);
+  if (!reqDocs || reqDocs.length === 0) return "";
+
+  const docRows = reqDocs.map(doc => {
+    const isPrefilled = hasConsent && doc.prefilledFile;
+    const currentFile = isPrefilled ? doc.prefilledFile : doc.fallbackFile;
+    const statusText = isPrefilled ? "Prefilled from Profile Vault" : "Default / Manual Upload Required";
+    const statusBadgeClass = isPrefilled ? "status-success" : "status-neutral";
+
+    return `
+      <div class="service-doc-item">
+        <div class="service-doc-left">
+          <svg class="icon-svg" style="width:16px;height:16px;color:#dc2626;flex-shrink:0" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+          <div style="min-width:0;flex:1">
+            <div class="service-doc-title">${esc(doc.title)} ${doc.required ? `<span style="color:#dc2626;font-weight:800">*</span>` : ""}</div>
+            <div class="service-doc-meta">
+              <span id="doc_status_${doc.id}" class="badge ${statusBadgeClass}" style="font-size:9px">${statusText}</span>
+              <span class="service-doc-fname" id="doc_fname_${doc.id}" title="${esc(currentFile)}">${esc(currentFile)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="service-doc-actions">
+          <input type="hidden" id="doc_val_${doc.id}" name="doc_${doc.id}" value="${esc(currentFile)}" data-title="${esc(doc.title)}" data-status="${isPrefilled ? "prefilled" : "manual"}">
+          <input type="file" id="doc_file_${doc.id}" accept=".pdf" style="display:none" onchange="handleServiceDocUpload(this, '${doc.id}')">
+          <button type="button" class="btn btn-small" onclick="viewServiceSpecificDoc('${doc.id}', '${esc(doc.title)}')">View PDF</button>
+          <button type="button" class="btn btn-small btn-primary" onclick="document.getElementById('doc_file_${doc.id}').click()">Upload PDF</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div class="service-docs-container">
+      <div class="service-docs-head">
+        <div>
+          <div class="service-docs-title">Required Supporting Documents (.pdf format)</div>
+          <div class="service-docs-sub">${hasConsent ? "Auto-prefilled from your Applicant Profile & Data Vault. You can view or upload/replace any document manually." : "Consent disabled. Please upload documents manually."}</div>
+        </div>
+        <span class="badge ${hasConsent ? "status-success" : "status-warning"}" style="font-size:9px">
+          ${hasConsent ? "Vault Sync Active" : "Manual Upload Mode"}
+        </span>
+      </div>
+      <div class="service-docs-list">
+        ${docRows}
+      </div>
+    </div>
+  `;
+}
+
+function handleServiceDocUpload(input, docId) {
+  if (!input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  if (!file.name.toLowerCase().endsWith(".pdf")) {
+    alert("Please select a PDF document (.pdf format only).");
+    input.value = "";
+    return;
+  }
+  const hiddenInp = document.getElementById("doc_val_" + docId);
+  if (hiddenInp) {
+    hiddenInp.value = file.name;
+    hiddenInp.dataset.status = "manual";
+  }
+  const badgeEl = document.getElementById("doc_status_" + docId);
+  if (badgeEl) {
+    badgeEl.className = "badge status-warning";
+    badgeEl.textContent = "Manually Uploaded";
+  }
+  const fnameEl = document.getElementById("doc_fname_" + docId);
+  if (fnameEl) {
+    fnameEl.textContent = file.name;
+    fnameEl.title = file.name;
+  }
+  toast("Uploaded: " + file.name);
+}
+window.handleServiceDocUpload = handleServiceDocUpload;
+
+function viewServiceSpecificDoc(docId, docTitle) {
+  const hiddenInp = document.getElementById("doc_val_" + docId);
+  const filename = hiddenInp ? hiddenInp.value : (docTitle.replace(/[^a-zA-Z0-9]/g, "_") + ".pdf");
+  const uploadStatus = hiddenInp ? hiddenInp.dataset.status : "prefilled";
+  const profile = getUserProfile(currentUser?.email);
+
+  openModal("PDF Preview - " + esc(filename), `
+    <div class="pdf-modal-container">
+      <div class="pdf-toolbar">
+        <div class="pdf-toolbar-left">
+          <span class="pdf-badge">PDF</span>
+          <span class="pdf-title">${esc(filename)}</span>
+          <span style="font-size:9px;color:#94a3b8">Source: ${uploadStatus === "manual" ? "Manually Uploaded (.pdf)" : "Pre-filled from Profile Vault"}</span>
+        </div>
+        <div class="pdf-toolbar-right">
+          <button class="btn btn-small" onclick="window.print()">Print</button>
+          <button class="btn btn-small btn-primary" data-action="close-modal">Close Preview</button>
+        </div>
+      </div>
+      <div class="pdf-body-scroll">
+        <div class="pdf-page-sheet">
+          <div class="pdf-watermark">SETU CITIZEN VAULT PREVIEW</div>
+          <div class="pdf-header">
+            <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA - SETU CITIZEN VAULT</div>
+            <div class="pdf-gov-title">${esc(docTitle.toUpperCase())}</div>
+            <div class="pdf-doc-type">Citizen Supporting Document Attachment</div>
+          </div>
+          <div class="pdf-meta-bar">
+            <span><b>File:</b> ${esc(filename)}</span>
+            <span><b>Citizen:</b> ${esc(currentUser?.name || "Aarav Patil")}</span>
+            <span><b>Status:</b> ${uploadStatus === "manual" ? "Uploaded by User" : "Verified Vault Record"}</span>
+          </div>
+          <div class="pdf-content-body">
+            <p>This document is attached to support your service application. Review details below:</p>
+            <table class="pdf-data-table">
+              <tr><td class="label-cell">Document Type</td><td class="val-cell">${esc(docTitle)}</td></tr>
+              <tr><td class="label-cell">Attached Filename</td><td class="val-cell">${esc(filename)}</td></tr>
+              <tr><td class="label-cell">Applicant Name</td><td class="val-cell">${esc(currentUser?.name || "Aarav Patil")}</td></tr>
+              <tr><td class="label-cell">Aadhaar Reference</td><td class="val-cell">${esc(profile.aadhaarNo || "4821 9901 8823")}</td></tr>
+              <tr><td class="label-cell">Verification Status</td><td class="val-cell" style="color:var(--green)">Ready for Submission &amp; Official Department Verification</td></tr>
+            </table>
+          </div>
+          <div class="pdf-signature-row">
+            <div class="pdf-seal">SETU VERIFIED<br>STATE VAULT<br>ENCRYPTED</div>
+            <div class="pdf-officer-signature">
+              <b>Setu Data Vault Protocol</b><br>
+              e-Governance &amp; Citizen Services Division<br>
+              <small>Certified Digital Document Attachment</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`,
+    `<button class="btn btn-primary" data-action="close-modal">Done</button>`
+  );
+}
+window.viewServiceSpecificDoc = viewServiceSpecificDoc;
+
 /* Dynamic Service-Specific Input Fields generator matching reference blueprint */
 function renderServiceSpecificFields(serviceId, profile, hasConsent) {
   switch (serviceId) {
-    case "income":
-      return `
-     <div class="field"><label>Occupation *</label><input id="app_occ" value="${esc(hasConsent ? profile.parentOccupation || "Service & Agriculture" : "")}" placeholder="e.g. Salaried / Farmer / Business"></div>
-     <div class="field"><label>Income Source *</label><input id="app_inc_source" value="${esc(hasConsent ? "Salaried & Agriculture" : "")}" placeholder="e.g. Salary, Agriculture, Rent"></div>
-     <div class="field full"><label>Annual Family Income (Rs.) *</label><input id="app_inc_amt" value="${esc(hasConsent ? profile.annualIncome || "120000" : "")}" placeholder="e.g. 120000"></div>`;
     case "scholarship":
       return `
-     <div class="field"><label>College / Institution Name *</label><input id="app_college" value="${esc(hasConsent ? profile.collegeName || "AISSMS IOIT Pune" : "")}" placeholder="e.g. COEP Pune"></div>
-     <div class="field"><label>Course Name *</label><input id="app_course" value="${esc(hasConsent ? profile.courseName || "B.Tech Computer Engineering" : "")}" placeholder="e.g. B.Tech Computer Science"></div>
-     <div class="field"><label>Year / Semester *</label><input id="app_sem" value="Semester 6" placeholder="e.g. 3rd Year / Sem 6"></div>
-     <div class="field"><label>Previous Marksheet Percentage *</label><input id="app_marks" value="88.5%" placeholder="e.g. 88.5%"></div>`;
-    case "business":
-      return `
-     <div class="field"><label>Business / Company Name *</label><input id="app_biz_name" placeholder="e.g. Apex Tech Solutions Pvt Ltd"></div>
-     <div class="field"><label>Business Type *</label><select id="app_biz_type"><option>Private Limited</option><option>Partnership</option><option>Proprietorship</option><option>LLP</option></select></div>
-     <div class="field"><label>Investment Amount (Rs.) *</label><input id="app_biz_inv" placeholder="e.g. 500000"></div>
-     <div class="field"><label>Number of Employees *</label><input id="app_biz_emp" placeholder="e.g. 12"></div>`;
+     <div class="field"><label>Candidate / Student Full Name *</label><input id="app_student_name" value="${esc(hasConsent ? currentUser?.name || "Aarav Suryakant Patil" : "")}" placeholder="Full Name of Student" required></div>
+     <div class="field"><label>Father / Guardian Full Name *</label><input id="app_father_name" value="${esc(hasConsent ? profile.fatherName || "Suryakant Patil" : "")}" placeholder="Father's Name" required></div>
+     <div class="field"><label>Mother Full Name *</label><input id="app_mother_name" value="${esc(hasConsent ? profile.motherName || "Sunita Patil" : "")}" placeholder="Mother's Name" required></div>
+     <div class="field"><label>Social Category *</label>
+       <select id="app_category">
+         <option ${profile.category === "General" ? "selected" : ""}>General / Open</option>
+         <option ${profile.category === "EBC" ? "selected" : ""}>EBC (Economically Backward Class)</option>
+         <option ${profile.category === "OBC" ? "selected" : ""}>OBC (Other Backward Class)</option>
+         <option ${profile.category === "SC" ? "selected" : ""}>SC (Scheduled Caste)</option>
+         <option ${profile.category === "ST" ? "selected" : ""}>ST (Scheduled Tribe)</option>
+         <option ${profile.category === "VJNT" ? "selected" : ""}>VJNT / NT</option>
+         <option ${profile.category === "SBC" ? "selected" : ""}>SBC / SEBC</option>
+       </select>
+     </div>
+     <div class="field"><label>College / Institution Name &amp; AISHE *</label><input id="app_college" value="${esc(hasConsent ? profile.collegeName || "AISSMS IOIT Pune (AISHE: C-41611)" : "")}" placeholder="e.g. COEP Pune" required></div>
+     <div class="field"><label>Course / Degree Name *</label><input id="app_course" value="${esc(hasConsent ? profile.courseName || "B.Tech Computer Engineering" : "")}" placeholder="e.g. B.Tech Computer Science" required></div>
+     <div class="field"><label>Current Year &amp; Semester *</label><input id="app_sem" value="3rd Year / Semester 6" placeholder="e.g. 3rd Year / Semester 6" required></div>
+     <div class="field"><label>Previous Marksheet Percentage / CGPA *</label><input id="app_marks" value="88.50% (CGPA: 8.92)" placeholder="e.g. 88.50%" required></div>
+     <div class="field"><label>CAP Allotment / Application ID *</label><input id="app_cap_id" value="CAP-2025-MH-88192" placeholder="e.g. CAP-2025-MH-88192" required></div>
+     <div class="field"><label>Admission Quota Type *</label>
+       <select id="app_quota">
+         <option>CAP Round Allotment (Merit)</option>
+         <option>TFWS (Tuition Fee Waiver Scheme)</option>
+         <option>EWS Quota</option>
+         <option>Management Quota</option>
+       </select>
+     </div>
+     <div class="field"><label>Family Annual Income (Rs.) *</label><input id="app_income" value="${esc(hasConsent ? profile.annualIncome || "120000" : "")}" placeholder="e.g. 120000" required></div>
+     <div class="field"><label>DBT Bank Account &amp; IFSC *</label><input id="app_bank" value="${esc(hasConsent ? `${profile.bankAccount} (${profile.bankName} - ${profile.ifscCode})` : "")}" placeholder="Account No &amp; IFSC" required></div>
+     <div class="field full"><label>Hosteller / Day Scholar Status *</label>
+       <select id="app_hostel">
+         <option>Day Scholar (Commuting from Home)</option>
+         <option>Hosteller (Government / College Hostel)</option>
+         <option>Hosteller (Private PG / Rented Room)</option>
+       </select>
+     </div>`;
     case "birth":
       return `
-     <div class="field"><label>Child's Full Name *</label><input id="app_child_name" placeholder="Enter child's full name" value="${esc(hasConsent ? "Advait Deshmukh" : "")}"></div>
+     <div class="field"><label>Child's Full Name (English) *</label><input id="app_child_name" placeholder="Enter child's full name" value="${esc(hasConsent ? "Pravin Krushna Bhosale" : "Pravin Krushna Bhosale")}" required></div>
+     <div class="field"><label>Gender *</label>
+       <select id="app_child_gender">
+         <option selected>Male</option>
+         <option>Female</option>
+         <option>Other</option>
+       </select>
+     </div>
      <div class="field dt-picker-field" style="position:relative">
        <label>Date &amp; Time of Birth *</label>
        <div class="dt-input-wrapper">
-         <input id="app_child_dob" type="text" readonly placeholder="YYYY-MM-DD HH:MM" value="${esc(hasConsent ? "2026-02-10 04:30" : "2026-09-28 09:30")}" onclick="openCustomDateTimePicker()" style="cursor:pointer;background:white">
+         <input id="app_child_dob" type="text" readonly placeholder="YYYY-MM-DD HH:MM" value="${esc(hasConsent ? "2026-02-10 04:30" : "2026-02-10 04:30")}" onclick="openCustomDateTimePicker()" style="cursor:pointer;background:white">
          <button type="button" class="dt-calendar-btn" onclick="openCustomDateTimePicker()" title="Select Date &amp; Time">
            <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
          </button>
        </div>
        <div id="customDateTimePicker" class="dt-picker-popover" style="display:none"></div>
      </div>
-     <div class="field full"><label>Place of Birth / Hospital Name *</label><input id="app_hospital" placeholder="e.g. Sahyadri Hospital, Pune" value="${esc(hasConsent ? "Sahyadri Hospital, Pune" : "")}"></div>`;
+     <div class="field"><label>Place of Birth / Hospital Name *</label><input id="app_hospital" placeholder="e.g. Sassoon General Hospital Pune" value="${esc(hasConsent ? "Sassoon General Hospital Pune" : "Sassoon General Hospital Pune")}" required></div>
+     <div class="field"><label>Hospital IPD / Registration No *</label><input id="app_hospital_reg_no" value="B20260950347004762" placeholder="Hospital Registration No" required></div>
+     <div class="field"><label>Mother's Full Name *</label><input id="app_mother_name" value="${esc(hasConsent ? "Sunita Krushna Bhosale" : "Sunita Krushna Bhosale")}" placeholder="Mother's Full Name" required></div>
+     <div class="field"><label>Mother's Aadhaar Number *</label><input id="app_mother_aadhaar" value="XXXX-XXXX-4512" placeholder="12-digit Aadhaar / UID" required></div>
+     <div class="field"><label>Father's Full Name *</label><input id="app_father_name" value="${esc(hasConsent ? "Krushna Tukaram Bhosale" : "Krushna Tukaram Bhosale")}" placeholder="Father's Full Name" required></div>
+     <div class="field"><label>Father's Aadhaar Number *</label><input id="app_father_aadhaar" value="${esc(hasConsent ? profile.aadhaarNo || "XXXX-XXXX-9036" : "XXXX-XXXX-9036")}" placeholder="12-digit Aadhaar / UID" required></div>
+     <div class="field full"><label>Address of Parents at Time of Birth *</label><input id="app_birth_address" value="Flat No 402, Shivshankar Heights, Near Sassoon Road, Station Area, Pune - 411001" placeholder="Address at birth" required></div>
+     <div class="field full"><label>Permanent Address of Parents *</label><input id="app_perm_address" value="At Post Koregaon, Taluka Haveli, District Pune - 412207" placeholder="Permanent address" required></div>`;
+    case "income":
+      return `
+     <div class="field"><label>Occupation / Profession *</label><input id="app_occ" value="${esc(hasConsent ? profile.parentOccupation || "Farmer & Salaried" : "")}" placeholder="e.g. Farmer / Salaried / Business" required></div>
+     <div class="field"><label>Detailed Income Sources *</label><input id="app_inc_source" value="${esc(hasConsent ? "Agriculture, Salary & Allied Services" : "")}" placeholder="e.g. Salary, Agriculture, Rent" required></div>
+     <div class="field"><label>Annual Family Income (Rs.) *</label><input id="app_inc_amt" value="${esc(hasConsent ? profile.annualIncome || "120000" : "")}" placeholder="e.g. 120000" required></div>
+     <div class="field"><label>Purpose of Certificate *</label><input id="app_inc_purpose" value="Student Scholarship &amp; College Fee Concession" placeholder="e.g. Scholarship, Ration Card, Bank Loan" required></div>
+     <div class="field"><label>Land Holding Details (Gat / Survey No) *</label><input id="app_land_gat" value="${esc(hasConsent ? `${profile.landRecordNo || "7/12-HAV-9921"} (1.25 Hectares, Haveli)` : "")}" placeholder="Gat No / Acre / Non-Agricultural"></div>
+     <div class="field"><label>Number of Family Earning Members *</label><input id="app_earning_members" value="1 Earning Member" placeholder="e.g. 1 or 2 Members"></div>`;
+    case "business":
+      return `
+     <div class="field"><label>Business / Enterprise Name *</label><input id="app_biz_name" value="${esc(hasConsent ? "Apex Tech Solutions Pvt Ltd" : "")}" placeholder="e.g. Apex Tech Solutions Pvt Ltd" required></div>
+     <div class="field"><label>Constitution / Organization Type *</label>
+       <select id="app_biz_type">
+         <option>Private Limited Company</option>
+         <option>Partnership Firm</option>
+         <option>Proprietorship</option>
+         <option>Limited Liability Partnership (LLP)</option>
+       </select>
+     </div>
+     <div class="field"><label>Major Business Activity *</label><input id="app_biz_activity" value="IT &amp; Software Consulting Services" placeholder="e.g. Manufacturing / Retail / IT" required></div>
+     <div class="field"><label>Total Capital Investment (Rs.) *</label><input id="app_biz_inv" value="500000" placeholder="e.g. 500000" required></div>
+     <div class="field"><label>Number of Employees *</label><input id="app_biz_emp" value="12" placeholder="e.g. 12" required></div>
+     <div class="field"><label>Commencement Date *</label><input id="app_biz_commence" type="date" value="2026-01-15" required></div>
+     <div class="field full"><label>Registered Business Premises Address *</label><input id="app_biz_addr" value="Plot 18, MIDC Infotech Park, Hinjewadi Phase 1, Pune - 411057" placeholder="Full Business Address" required></div>`;
     case "pension":
       return `
-     <div class="field"><label>Pension Scheme Type *</label><select id="app_pension_type"><option>Indira Gandhi National Old Age Pension</option><option>State Senior Citizen Support</option></select></div>
-     <div class="field"><label>Spouse Status *</label><select id="app_spouse_status"><option>Married</option><option>Widowed</option><option>Single</option></select></div>`;
+     <div class="field"><label>Pension Scheme Type *</label>
+       <select id="app_pension_type">
+         <option>Indira Gandhi National Old Age Pension</option>
+         <option>Sanjay Gandhi Niradhar Anudan Yojana</option>
+         <option>Shravan Bal Seva Rajya Nivruttivetan Yojana</option>
+       </select>
+     </div>
+     <div class="field"><label>Applicant Age &amp; Date of Birth *</label><input id="app_pension_age" value="65 Years (DOB: 1961-04-12)" placeholder="e.g. 65 Years" required></div>
+     <div class="field"><label>Marital / Spouse Status *</label>
+       <select id="app_spouse_status">
+         <option>Widowed / Single Destitute</option>
+         <option>Married</option>
+         <option>Divorced</option>
+       </select>
+     </div>
+     <div class="field"><label>Annual Family Income (Rs.) *</label><input id="app_pension_income" value="45000" placeholder="e.g. 45000" required></div>
+     <div class="field"><label>Continuous Residence in Maharashtra *</label><input id="app_pension_res" value="40 Years in Pune District" placeholder="e.g. 35 Years" required></div>
+     <div class="field"><label>Aadhaar Linked DBT Bank Account *</label><input id="app_pension_bank" value="${esc(hasConsent ? `${profile.bankAccount} (${profile.bankName} - ${profile.ifscCode})` : "")}" placeholder="Account No &amp; Bank" required></div>`;
     case "residence":
       return `
-     <div class="field"><label>Duration of Residence (Years) *</label><input id="app_res_years" value="15" placeholder="e.g. 15 Years"></div>
-     <div class="field"><label>Purpose of Certificate *</label><input id="app_res_purpose" value="Education & Employment" placeholder="e.g. Passport / Education"></div>`;
+     <div class="field"><label>Continuous Period of Residence (Years) *</label><input id="app_res_years" value="18 Years" placeholder="e.g. 15 Years" required></div>
+     <div class="field"><label>Purpose of Domicile Certificate *</label><input id="app_res_purpose" value="Higher Education Admission &amp; Govt Competitive Exams" placeholder="e.g. Education / Employment" required></div>
+     <div class="field full"><label>Current Residence Address &amp; Pincode *</label><input id="app_res_curr_addr" value="${esc(hasConsent ? `${profile.addressLine1}, Taluka ${profile.taluka}, District ${profile.district} - ${profile.pincode}` : "")}" placeholder="Current Full Address" required></div>
+     <div class="field full"><label>Schooling &amp; Education in Maharashtra *</label><input id="app_res_schooling" value="Primary: Shivaji Vidyalaya Pune, Secondary: Modern High School Pune" placeholder="Primary &amp; High School Names" required></div>`;
     case "caste":
       return `
-     <div class="field"><label>Caste *</label><input id="app_caste" placeholder="e.g. Maratha / Kunbi / Mahars"></div>
-     <div class="field"><label>Sub-Caste *</label><input id="app_subcaste" placeholder="Sub-caste details"></div>
-     <div class="field full"><label>Ancestral District *</label><input id="app_caste_dist" value="${esc(hasConsent ? profile.district || "Pune" : "")}"></div>`;
+     <div class="field"><label>Caste / Tribe Claimed *</label><input id="app_caste" value="Maratha / Kunbi" placeholder="e.g. Maratha / Kunbi / SC" required></div>
+     <div class="field"><label>Sub-Caste Details *</label><input id="app_subcaste" value="96 Kuli Maratha" placeholder="e.g. 96 Kuli Maratha" required></div>
+     <div class="field"><label>Father's &amp; Grandfather's Name *</label><input id="app_caste_ancestors" value="${esc(hasConsent ? `${profile.fatherName} & Tukaram Patil` : "")}" placeholder="Father &amp; Grandfather Names" required></div>
+     <div class="field"><label>Ancestral Taluka &amp; District *</label><input id="app_caste_dist" value="${esc(hasConsent ? `${profile.taluka || "Haveli"}, ${profile.district || "Pune"}` : "Haveli, Pune")}" placeholder="e.g. Haveli, Pune" required></div>
+     <div class="field"><label>Family Residing in MH Prior to Deemed Date *</label><input id="app_caste_deemed" value="Ancestral Permanent Residents Since Prior to 1967" placeholder="e.g. Residing since 1950/1967" required></div>
+     <div class="field"><label>Purpose of Certificate *</label><input id="app_caste_purpose" value="Educational Admission &amp; Government Reservation" placeholder="e.g. Admission / Employment" required></div>`;
     case "trade":
       return `
-     <div class="field"><label>Business Premises Name *</label><input id="app_trade_name" placeholder="e.g. Green Leaf Organics"></div>
-     <div class="field"><label>Premises Area (Sq. Ft.) *</label><input id="app_trade_area" placeholder="e.g. 450 sq ft"></div>
-     <div class="field"><label>Premises Ownership *</label><select id="app_trade_ownership"><option>Owned</option><option>Rented / Rented with Owner NOC</option></select></div>
-     <div class="field"><label>Shop Registration No</label><input id="app_shop_reg" placeholder="Optional Shop Act No"></div>`;
+     <div class="field"><label>Business / Trade Establishment Name *</label><input id="app_trade_name" value="Green Leaf Organics &amp; Healthcare" placeholder="e.g. Green Leaf Organics" required></div>
+     <div class="field"><label>Nature of Trade / Category *</label><input id="app_trade_nature" value="Organic Retail &amp; Ayurvedic Food Supplements" placeholder="e.g. Grocery / Retail / Pharmacy" required></div>
+     <div class="field"><label>Premises Carpet Area (Sq. Ft.) *</label><input id="app_trade_area" value="450 Sq. Ft." placeholder="e.g. 450 sq ft" required></div>
+     <div class="field"><label>Premises Ownership Type *</label>
+       <select id="app_trade_ownership">
+         <option>Rented with Registered Agreement &amp; Owner NOC</option>
+         <option>Owned Commercial Property</option>
+       </select>
+     </div>
+     <div class="field"><label>Connected Electric Load / Power *</label><input id="app_trade_power" value="3.5 HP / 5 KW Commercial Load" placeholder="e.g. 3.5 HP" required></div>
+     <div class="field"><label>Number of Workers / Staff *</label><input id="app_trade_workers" value="4 Employees" placeholder="e.g. 4 Employees" required></div>
+     <div class="field full"><label>Complete Trade Premises Address &amp; Ward *</label><input id="app_trade_addr" value="Shop No. 4, Ground Floor, Royal Plaza, FC Road, Shivaji Nagar, Pune - 411004" placeholder="Full Trade Address" required></div>`;
     case "water":
       return `
-     <div class="field"><label>Property / Plot Number *</label><input id="app_water_plot" placeholder="e.g. Plot No 42, Sector 4"></div>
-     <div class="field"><label>Connection Type *</label><select id="app_water_type"><option>Residential</option><option>Commercial</option></select></div>
-     <div class="field full"><label>Required Pipe Size (Inches) *</label><select id="app_water_pipe"><option>0.5 Inch (Standard Domestic)</option><option>0.75 Inch</option><option>1.0 Inch (Commercial)</option></select></div>`;
+     <div class="field"><label>Property Assessment ID / Index II *</label><input id="app_water_plot" value="PMC-PROP-99214 (CTS No 1042)" placeholder="e.g. PMC-PROP-99214" required></div>
+     <div class="field"><label>Connection Category *</label>
+       <select id="app_water_type">
+         <option>Domestic Residential (Individual / Society)</option>
+         <option>Commercial Establishment</option>
+         <option>Industrial / Bulk Connection</option>
+       </select>
+     </div>
+     <div class="field"><label>Required Water Pipe Size *</label>
+       <select id="app_water_pipe">
+         <option>0.5 Inch (Standard Domestic Flow)</option>
+         <option>0.75 Inch (High Flow Domestic)</option>
+         <option>1.0 Inch (Commercial / Society)</option>
+       </select>
+     </div>
+     <div class="field"><label>Number of Occupants / Families *</label><input id="app_water_families" value="6 Residents (Single Family)" placeholder="e.g. 6 Members" required></div>
+     <div class="field full"><label>Property Site Address &amp; Ward *</label><input id="app_water_addr" value="${esc(hasConsent ? `${profile.addressLine1}, Ward 14, Pune - ${profile.pincode}` : "")}" placeholder="Full Property Address" required></div>`;
     case "ration":
       return `
-     <div class="field"><label>Existing Ration Card Number *</label><input id="app_ration_no" value="${esc(hasConsent ? profile.rationCardNo || "RC-MH-981242" : "")}"></div>
-     <div class="field"><label>Ration Card Category *</label><select id="app_ration_cat"><option ${profile.rationType?.includes("Saffron") ? "selected" : ""}>Saffron (APL)</option><option ${profile.rationType?.includes("Yellow") ? "selected" : ""}>Yellow (BPL)</option></select></div>
-     <div class="field full"><label>Head of Family Name *</label><input id="app_head_family" value="${esc(hasConsent ? profile.fatherName || currentUser.name : "")}"></div>`;
+     <div class="field"><label>Head of Family Name (Eldest Adult Female) *</label><input id="app_head_family" value="${esc(hasConsent ? profile.motherName || "Sunita Suryakant Patil" : "")}" placeholder="Head of Family Full Name" required></div>
+     <div class="field"><label>Existing Ration Card Number *</label><input id="app_ration_no" value="${esc(hasConsent ? profile.rationCardNo || "RC-MH-981242" : "")}" placeholder="e.g. RC-MH-981242" required></div>
+     <div class="field"><label>Current Ration Card Category *</label>
+       <select id="app_ration_cat">
+         <option ${profile.rationType?.includes("Saffron") ? "selected" : ""}>Saffron (APL - Above Poverty Line)</option>
+         <option ${profile.rationType?.includes("Yellow") ? "selected" : ""}>Yellow (BPL - Below Poverty Line)</option>
+         <option>Antyodaya Anna Yojana (AAY)</option>
+       </select>
+     </div>
+     <div class="field"><label>Modification Request Type *</label>
+       <select id="app_ration_mod">
+         <option>Addition of Family Member / Child</option>
+         <option>Transfer of Fair Price Shop / Address</option>
+         <option>Card Renewal / Duplicate Card</option>
+         <option>Member Deletion / Surrender</option>
+       </select>
+     </div>
+     <div class="field"><label>Total Family Members *</label><input id="app_ration_members" value="4 Members (2 Adults, 2 Children)" placeholder="e.g. 4 Members" required></div>
+     <div class="field"><label>LPG Gas Connection Status *</label><input id="app_ration_lpg" value="HP Gas - Single Cylinder (Consumer No 881294)" placeholder="e.g. HP Gas Consumer No" required></div>
+     <div class="field full"><label>Fair Price Shop (FPS) &amp; Ward *</label><input id="app_ration_fps" value="FPS Shop No. 42 (Shivaji Nagar Ward, Pune)" placeholder="FPS Shop Name / Number" required></div>`;
     case "driving":
       return `
-     <div class="field"><label>Driving Licence Number *</label><input id="app_dl_no" placeholder="e.g. MH-12-20210098124"></div>
-     <div class="field"><label>Issuing RTO Office *</label><input id="app_rto_source" value="MH-12 Pune RTO"></div>
-     <div class="field full"><label>Destination RTO / State for Transfer *</label><input id="app_rto_dest" placeholder="e.g. MH-02 Mumbai West / Karnataka"></div>`;
+     <div class="field"><label>Existing Driving Licence Number *</label><input id="app_dl_no" value="MH-12-20210098124" placeholder="e.g. MH-12-20210098124" required></div>
+     <div class="field"><label>Issuing RTO Authority *</label><input id="app_rto_source" value="MH-12 Pune RTO" placeholder="e.g. MH-12 Pune RTO" required></div>
+     <div class="field"><label>Vehicle Classes Endorsed *</label><input id="app_dl_classes" value="MCWG (Motorcycle with Gear) + LMV (Car)" placeholder="e.g. MCWG, LMV" required></div>
+     <div class="field"><label>NOC Transfer Type *</label>
+       <select id="app_dl_type">
+         <option>Inter-District Transfer within Maharashtra</option>
+         <option>Inter-State Transfer NOC</option>
+         <option>Change of Address on DL</option>
+       </select>
+     </div>
+     <div class="field"><label>Destination RTO Office *</label><input id="app_rto_dest" value="MH-02 Mumbai West RTO" placeholder="e.g. MH-02 Mumbai West / KA-01 Bangalore" required></div>
+     <div class="field"><label>Reason for NOC / Transfer *</label><input id="app_dl_reason" value="Job Relocation to Mumbai Jurisdiction" placeholder="e.g. Employment Relocation" required></div>`;
     case "property":
       return `
-     <div class="field"><label>Property ID / Assessment Number *</label><input id="app_prop_id" placeholder="e.g. PMC-PROP-99214"></div>
-     <div class="field"><label>Ward Number *</label><input id="app_ward_no" value="Ward 14"></div>
-     <div class="field full"><label>Property Type *</label><select id="app_prop_type"><option>Residential Apartment</option><option>Commercial Shop</option><option>Plot / Open Land</option></select></div>`;
+     <div class="field"><label>Property Assessment ID *</label><input id="app_prop_id" value="PMC-PROP-99214" placeholder="e.g. PMC-PROP-99214" required></div>
+     <div class="field"><label>Ward / Administrative Zone *</label><input id="app_ward_no" value="Ward 14 (Shivaji Nagar - Ghole Road)" placeholder="e.g. Ward 14" required></div>
+     <div class="field"><label>Current Registered Owner Name *</label><input id="app_prop_curr_owner" value="${esc(hasConsent ? profile.fatherName || "Suryakant Patil" : "Suryakant Patil")}" placeholder="Current Owner" required></div>
+     <div class="field"><label>Transferee / Purchaser Name *</label><input id="app_prop_transferee" value="${esc(hasConsent ? currentUser?.name || "Aarav Patil" : "Aarav Patil")}" placeholder="New Owner Name" required></div>
+     <div class="field"><label>Nature of Transfer / Mutation *</label>
+       <select id="app_prop_transfer_type">
+         <option>Inheritance &amp; Succession (Family Settlement)</option>
+         <option>Registered Sale Deed (Purchase)</option>
+         <option>Gift Deed</option>
+         <option>Partition Deed</option>
+       </select>
+     </div>
+     <div class="field"><label>Built-Up Area &amp; Property Type *</label><input id="app_prop_area" value="950 Sq. Ft. (Residential Apartment)" placeholder="e.g. 950 Sq. Ft. Apartment" required></div>
+     <div class="field full"><label>Property Full Address &amp; Society *</label><input id="app_prop_addr" value="Flat 301, Lotus Residency, Baner Road, Shivaji Nagar Ward, Pune - 411045" placeholder="Full Property Address" required></div>`;
     default:
       return `<div class="field full"><label>Additional Request Details</label><input placeholder="Provide context"></div>`;
   }
@@ -1847,6 +2247,7 @@ function openApply(serviceId = "") {
        <div class="form-grid" id="serviceSpecificContainer">
          ${renderServiceSpecificFields(service.id, profile, hasConsent)}
        </div>
+       ${renderServiceDocumentsSection(service.id, profile, hasConsent)}
      </div>
 
      <div class="field full">
@@ -1897,20 +2298,20 @@ function ensureAppVerification(app) {
   if (sLower.includes("birth")) {
     app.verification.registrySystem = "Hospital Delivery Registry · Civil Registration System (CRS)";
     app.verification.registryTitle = "Hospital Birth Record Cross-Verification";
-    const hospital = details.hospital || details.birthPlace || "Sahyadri Hospital, Pune";
-    const childName = details.child_name || details.childName || "Advait Deshmukh";
-    const dob = details.child_dob || details.birthDate || "2026-02-10";
+    const hospital = details.hospital || details.birthPlace || "Sassoon General Hospital Pune";
+    const childName = details.child_name || details.childName || "Pravin Krushna Bhosale";
+    const dob = details.child_dob || details.birthDate || "2026-02-10 04:30";
 
     if (!app.verification.registryData || Object.keys(app.verification.registryData).length === 0) {
       app.verification.registryData = {
         hospital: hospital,
         childName: childName,
         dob: dob,
-        parents: `${profile.motherName || "Sunita Patil"} & ${app.applicant}`,
-        hospitalRegNo: "HOSP-CRS-2026-" + (app.id.split("-").pop() || "99214"),
-        doctor: "Dr. R. K. Joshi, MD (Obstetrics & Gynaecology)",
-        deliveryType: "Institutional Delivery (Normal)",
-        statusInHospital: "Confirmed in Maternity Ward Digital Ledger"
+        parents: `${details.mother_name || profile.motherName || "Sunita Krushna Bhosale"} & ${details.father_name || app.applicant || "Krushna Tukaram Bhosale"}`,
+        hospitalRegNo: details.hospital_reg_no || "B20260950347004762",
+        doctor: "Dr. S. M. Gaikwad, MD (Obstetrics & Gynaecology), Sassoon General Hospital Pune",
+        deliveryType: "Institutional Delivery (Full-Term Normal Delivery)",
+        statusInHospital: "Confirmed in Maternity Ward Digital Register (CRS Record Matched)"
       };
       app.verification.registryStatus = "verified";
       app.verification.registryMessage = "Verified in Hospital Data";
@@ -1925,7 +2326,7 @@ function ensureAppVerification(app) {
           size: "1.4 MB",
           type: "hospital_report",
           status: "pending",
-          details: { hospital, childName, dob, doctor: "Dr. R. K. Joshi", weight: "3.25 kg", gender: "Male" }
+          details: { hospital, childName, dob, doctor: "Dr. S. M. Gaikwad", weight: "3.25 kg", gender: details.child_gender || "Male" }
         },
         {
           id: "doc-delivery-slip",
@@ -1934,7 +2335,7 @@ function ensureAppVerification(app) {
           size: "820 KB",
           type: "delivery_slip",
           status: "pending",
-          details: { hospital, admissionNo: "IPD-88219", bedNo: "Maternity-Ward-04", regDate: dob }
+          details: { hospital, admissionNo: "IPD-88219", bedNo: "Maternity-Ward-04", regDate: dob, regNo: details.hospital_reg_no || "B20260950347004762" }
         },
         {
           id: "doc-parents-aadhaar",
@@ -1943,7 +2344,16 @@ function ensureAppVerification(app) {
           size: "950 KB",
           type: "aadhaar",
           status: "pending",
-          details: { applicant: app.applicant, aadhaarNo: profile.aadhaarNo || "4821 9901 8823" }
+          details: { applicant: app.applicant, aadhaarNo: details.father_aadhaar || profile.aadhaarNo || "XXXX-XXXX-9036", motherAadhaar: details.mother_aadhaar || "XXXX-XXXX-4512" }
+        },
+        {
+          id: "doc-parents-address",
+          name: "Parents Residential Address Proof",
+          filename: "Electricity_Bill_Address.pdf",
+          size: "680 KB",
+          type: "address",
+          status: "pending",
+          details: { address: details.perm_address || profile.addressLine1 || "At Post Koregaon, Taluka Haveli, District Pune - 412207" }
         }
       ];
     }
@@ -2205,33 +2615,33 @@ function openPdfDocumentViewer(appId, docId) {
   } else if (doc.type === "hospital_report" || doc.type === "delivery_slip") {
     docContentHtml = `
       <div class="pdf-header">
-        <div class="pdf-emblem-text">${esc((d.hospital || "Sahyadri Super Speciality Hospital, Pune").toUpperCase())}</div>
+        <div class="pdf-emblem-text">${esc((d.hospital || "Sassoon General Hospital Pune").toUpperCase())}</div>
         <div class="pdf-gov-title">DEPARTMENT OF OBSTETRICS &amp; NEONATOLOGY</div>
         <div class="pdf-doc-type">Institutional Birth Record &amp; Labor Room Discharge Summary</div>
       </div>
       <div class="pdf-meta-bar">
-        <span><b>Hospital Record UID:</b> HOSP-CRS-2026-99214</span>
+        <span><b>Hospital Record UID:</b> ${esc(d.regNo || "B20260950347004762")}</span>
         <span><b>Bed / Ward:</b> Maternity IPD-04</span>
-        <span><b>Date of Delivery:</b> ${esc(d.dob || "2026-02-10")}</span>
+        <span><b>Date of Delivery:</b> ${esc(d.dob || "2026-02-10 04:30")}</span>
       </div>
       <div class="pdf-content-body">
         <p>This institutional delivery report certifies the birth of infant delivered in this hospital as recorded in the statutory civil register:</p>
         <table class="pdf-data-table">
-          <tr><td class="label-cell">Child Full Name</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(d.childName || "Advait Deshmukh")}</td></tr>
-          <tr><td class="label-cell">Mother's Full Name</td><td class="val-cell">${esc(profile.motherName || "Sunita Patil")}</td></tr>
-          <tr><td class="label-cell">Father's Full Name</td><td class="val-cell">${esc(app.applicant)}</td></tr>
-          <tr><td class="label-cell">Date &amp; Time of Birth</td><td class="val-cell">${esc(d.dob || "10-Feb-2026")} · 04:30 AM</td></tr>
-          <tr><td class="label-cell">Gender &amp; Birth Weight</td><td class="val-cell">Male · 3.25 Kilograms</td></tr>
+          <tr><td class="label-cell">Child Full Name</td><td class="val-cell" style="color:var(--teal);font-size:12px">${esc(d.childName || "Pravin Krushna Bhosale")}</td></tr>
+          <tr><td class="label-cell">Mother's Full Name</td><td class="val-cell">${esc(d.mother || profile.motherName || "Sunita Krushna Bhosale")}</td></tr>
+          <tr><td class="label-cell">Father's Full Name</td><td class="val-cell">${esc(d.father || app.applicant || "Krushna Tukaram Bhosale")}</td></tr>
+          <tr><td class="label-cell">Date &amp; Time of Birth</td><td class="val-cell">${esc(d.dob || "10-Feb-2026 · 04:30 AM")}</td></tr>
+          <tr><td class="label-cell">Gender &amp; Birth Weight</td><td class="val-cell">${esc(d.gender || "Male")} · 3.25 Kilograms</td></tr>
           <tr><td class="label-cell">Delivery Classification</td><td class="val-cell">Institutional Delivery (Full-Term Normal Delivery)</td></tr>
-          <tr><td class="label-cell">Attending Obstetrician</td><td class="val-cell">${esc(d.doctor || "Dr. R. K. Joshi, MD (Obs & Gyn) [MMC Reg: 2004/08/2912]")}</td></tr>
+          <tr><td class="label-cell">Attending Obstetrician</td><td class="val-cell">${esc(d.doctor || "Dr. S. M. Gaikwad, MD (Obs & Gyn) [MMC Reg: 2004/08/2912]")}</td></tr>
           <tr><td class="label-cell">Hospital Civil Registry Linkage</td><td class="val-cell" style="color:var(--green)">SYNCED WITH MUNICIPAL CIVIL REGISTRATION SYSTEM (CRS)</td></tr>
         </table>
       </div>
       <div class="pdf-signature-row">
-        <div class="pdf-seal" style="color:var(--navy);border-color:var(--navy)">HOSPITAL CIVIL REGISTRY<br>BIRTH DISCHARGE SEAL<br>SAHYADRI PUNE</div>
+        <div class="pdf-seal" style="color:var(--navy);border-color:var(--navy)">HOSPITAL CIVIL REGISTRY<br>BIRTH DISCHARGE SEAL<br>SASSOON GENERAL HOSPITAL PUNE</div>
         <div class="pdf-officer-signature">
           <b>Medical Superintendent / Civil Registrar</b><br>
-          Maternity &amp; Child Health Wing<br>
+          Maternity &amp; Child Health Wing, Sassoon General Hospital Pune<br>
           <small>Authorized Signatory Under Registration of Births &amp; Deaths Act</small>
         </div>
       </div>`;
@@ -2377,7 +2787,7 @@ function showApplication(id) {
           <div><span>Attending Physician:</span> <b>${esc(reg.doctor)}</b></div>
         </div>
         <div style="margin-top:8px;font-size:10px;color:#166534;background:#dcfce7;padding:6px 10px;border-radius:6px">
-          <b>Verification Result:</b> Verified in Hospital Data. Institutional delivery entry confirmed and authenticated by Sahyadri Hospital Civil Registration Node.
+          <b>Verification Result:</b> Verified in Hospital Data. Institutional delivery entry confirmed and authenticated by ${esc(reg.hospital || "Sassoon General Hospital Pune")} Civil Registration Node.
         </div>
         ${canReviewApp(app) ? `
         <div class="reg-actions">
@@ -2542,6 +2952,117 @@ function generateCertificate(appId) {
   const profile = getUserProfile(app.email);
   const serviceName = app.service.trim();
 
+  // Official Form 5 Maharashtra Birth Certificate (Pravin PDF Reference)
+  if (serviceName.toLowerCase().includes("birth")) {
+    const d = app.serviceDetails || {};
+    const childName = d.child_name || "Pravin Krushna Bhosale";
+    const gender = d.child_gender || "Male";
+    const dob = d.child_dob || "2026-02-10 04:30";
+    const dobDateOnly = dob.split(" ")[0] || "2026-02-10";
+    const hospital = d.hospital || "Sassoon General Hospital Pune";
+    const mother = d.mother_name || profile.motherName || "Sunita Krushna Bhosale";
+    const motherAadhaar = d.mother_aadhaar || "XXXX-XXXX-4512";
+    const father = d.father_name || profile.fatherName || "Krushna Tukaram Bhosale";
+    const fatherAadhaar = d.father_aadhaar || profile.aadhaarNo || "XXXX-XXXX-9036";
+    const birthAddress = d.birth_address || "Flat No 402, Shivshankar Heights, Near Sassoon Road, Station Area, Pune - 411001";
+    const permAddress = d.perm_address || `${profile.addressLine1 || "At Post Koregaon, Taluka Haveli"}, District ${profile.district || "Pune"} - 412207`;
+    const regNo = d.hospital_reg_no || "B20260950347004762";
+    const regDate = "12-02-2026";
+    const issueDate = "14-02-2026";
+
+    openModal(`Official Certificate - ${esc(app.id)} (Form 5)`, `
+      <div class="form5-card" id="certDocument">
+        <div class="form5-top-row">
+          <span>FORM 5 / प्रपत्र ५</span>
+          <span>MAHARASHTRA ACT NO. XVIII OF 1969</span>
+        </div>
+        <div class="form5-emblem-header">
+          <div class="form5-state-title">GOVERNMENT OF MAHARASHTRA / महाराष्ट्र शासन</div>
+          <div class="form5-dept-title">DEPARTMENT OF HEALTH SERVICES / आरोग्य सेवा विभाग</div>
+          <div class="form5-hosp-title">${esc(hospital.toUpperCase())}</div>
+        </div>
+        <div class="form5-cert-title-box">
+          <div class="form5-cert-title-mr">जन्म प्रमाणपत्र</div>
+          <div class="form5-cert-title-en">BIRTH CERTIFICATE</div>
+        </div>
+        <div class="form5-act-rule">
+          (ISSUED UNDER SECTION 12/17 OF THE REGISTRATION OF BIRTHS &amp; DEATHS ACT, 1969 AND RULE 8/13 OF THE MAHARASHTRA REGISTRATION OF BIRTHS &amp; DEATHS RULES 2000)<br>
+          (जन्म आणि मृत्यू नोंदणी अधिनियम, १९६९ च्या कलम १२/१७ आणि महाराष्ट्र जन्म आणि मृत्यू नोंदणी नियम २००० च्या नियम ८/१३ अन्वये देण्यात आले आहे)
+        </div>
+        <div class="form5-certify-stmt">
+          THIS IS TO CERTIFY THAT THE FOLLOWING INFORMATION HAS BEEN TAKEN FROM THE ORIGINAL RECORD OF BIRTH WHICH IS THE REGISTER FOR <b>${esc(hospital.toUpperCase())}</b> OF TAHSIL/BLOCK PUNE OF DISTRICT PUNE OF STATE MAHARASHTRA, INDIA.<br>
+          <small style="color:#64748b">(प्रमाणित करण्यात येत आहे की खालील माहिती जन्म मूळ नोंदीच्या वहीतून घेण्यात आली आहे जी की ${esc(hospital)}, तालुका पुणे, जिल्हा पुणे, महाराष्ट्र राज्य, भारत च्या नोंदवहीत नोंद आहे.)</small>
+        </div>
+
+        <table class="form5-table">
+          <tr>
+            <td class="lbl">नाव / Name:</td>
+            <td class="val">${esc(childName)}</td>
+            <td class="lbl">लिंग / Sex:</td>
+            <td class="val">${esc(gender)} / ${gender.toLowerCase() === "male" ? "पुरुष" : "स्त्री"}</td>
+          </tr>
+          <tr>
+            <td class="lbl">जन्म दिनांक / Date of Birth:</td>
+            <td class="val">${esc(dobDateOnly)} (Ten February Two Thousand Twenty Six)</td>
+            <td class="lbl">जन्म ठिकाण / Place of Birth:</td>
+            <td class="val">${esc(hospital)}</td>
+          </tr>
+          <tr>
+            <td class="lbl">आईचे नाव / Name of Mother:</td>
+            <td class="val">${esc(mother)}</td>
+            <td class="lbl">आईचा आधार क्रमांक / Mother UID:</td>
+            <td class="val">${esc(motherAadhaar)}</td>
+          </tr>
+          <tr>
+            <td class="lbl">वडिलांचे नाव / Name of Father:</td>
+            <td class="val">${esc(father)}</td>
+            <td class="lbl">वडिलांचा आधार क्रमांक / Father UID:</td>
+            <td class="val">${esc(fatherAadhaar)}</td>
+          </tr>
+          <tr>
+            <td class="lbl">जन्माच्या वेळी पालकांचा पत्ता / Address at Birth:</td>
+            <td class="val" colspan="3">${esc(birthAddress)}</td>
+          </tr>
+          <tr>
+            <td class="lbl">पालकांचा कायम पत्ता / Permanent Address:</td>
+            <td class="val" colspan="3">${esc(permAddress)}</td>
+          </tr>
+          <tr>
+            <td class="lbl">नोंदणी क्रमांक / Registration No:</td>
+            <td class="val" style="color:var(--teal);font-weight:800">${esc(regNo)}</td>
+            <td class="lbl">नोंदणी दिनांक / Date of Registration:</td>
+            <td class="val">${esc(regDate)}</td>
+          </tr>
+          <tr>
+            <td class="lbl">शेरा / Remarks:</td>
+            <td class="val" colspan="3" style="color:var(--green)">Institutional Delivery Verified &amp; Digitally Authenticated</td>
+          </tr>
+        </table>
+
+        <div class="form5-footer">
+          <div>
+            <div style="font-size:10px"><b>निर्गमित दिनांक / Date of Issue:</b> ${esc(issueDate)}</div>
+            <div style="font-size:10px;margin-top:2px"><b>Application Ref:</b> ${esc(app.id)}</div>
+            <div style="font-size:9px;color:#64748b;margin-top:2px">Setu Interoperability Node: MH-CRS-PUN-04</div>
+          </div>
+          <div style="text-align:right">
+            <div class="seal-badge" style="display:inline-block;padding:4px 8px;font-size:9px;border:1px solid #0f172a;text-align:center;font-weight:800">
+              CRS GOVT OF MAHARASHTRA<br>DIGITALLY SIGNED<br>REGISTRAR PUNE
+            </div>
+            <div style="font-size:10px;font-weight:800;margin-top:4px">REGISTRAR (BIRTH &amp; DEATH)</div>
+            <div style="font-size:9px;color:#475569">${esc(hospital.toUpperCase())}</div>
+          </div>
+        </div>
+
+        <div class="form5-slogan">
+          "ENSURE REGISTRATION OF EVERY BIRTH AND DEATH" / "प्रत्येक जन्म व मृत्यूची नोंदणी सुनिश्चित करा"
+        </div>
+      </div>`,
+      `<button class="btn" data-action="close-modal">Close</button><button class="btn btn-primary" onclick="window.print()">Print / Save PDF</button>`
+    );
+    return;
+  }
+
   // Fix: Avoid repeating "Certificate" if service name already ends with Certificate
   const certTitle = serviceName.toLowerCase().endsWith("certificate") ? serviceName : serviceName + " Certificate";
 
@@ -2564,10 +3085,6 @@ function generateCertificate(appId) {
     extraCertFields = `
      <div class="cert-field"><span class="cert-label">Registered Business Name:</span><span class="cert-val">${esc(app.serviceDetails?.biz_name || "Joshi IT Solutions Pvt Ltd")}</span></div>
      <div class="cert-field"><span class="cert-label">Business Structure &amp; Investment:</span><span class="cert-val">${esc(app.serviceDetails?.biz_type || "Private Limited")} (Rs. ${esc(app.serviceDetails?.biz_inv || "500,000")})</span></div>`;
-  } else if (serviceName.toLowerCase().includes("birth")) {
-    extraCertFields = `
-     <div class="cert-field"><span class="cert-label">Child's Name:</span><span class="cert-val">${esc(app.serviceDetails?.child_name || "Advait Deshmukh")}</span></div>
-     <div class="cert-field"><span class="cert-label">Hospital / Birth Place:</span><span class="cert-val">${esc(app.serviceDetails?.hospital || "Sahyadri Hospital, Pune")}</span></div>`;
   } else if (serviceName.toLowerCase().includes("pension")) {
     extraCertFields = `
      <div class="cert-field"><span class="cert-label">Sanctioned Pension Scheme:</span><span class="cert-val">${esc(app.serviceDetails?.pension_type || "Indira Gandhi National Old Age Pension")}</span></div>
@@ -2724,11 +3241,61 @@ document.addEventListener("click", e => {
       });
     }
 
+    // Collect attached supporting documents from the application form
+    const submittedDocs = [];
+    document.querySelectorAll("input[id^='doc_val_']").forEach((hiddenInp, idx) => {
+      const docId = hiddenInp.id.replace("doc_val_", "");
+      const docTitle = hiddenInp.dataset.title || ("Supporting Document " + (idx + 1));
+      const filename = hiddenInp.value || (docTitle.replace(/[^a-zA-Z0-9]/g, "_") + ".pdf");
+      const uploadStatus = hiddenInp.dataset.status || "prefilled";
+
+      let docType = "service_doc";
+      if (docId.includes("allotment")) docType = "allotment_letter";
+      else if (docId.includes("receipt") || docId.includes("fee")) docType = "fee_receipt";
+      else if (docId.includes("mark")) docType = "marksheet";
+      else if (docId.includes("discharge") || docId.includes("slip") || docId.includes("hospital")) docType = "hospital_report";
+      else if (docId.includes("pan")) docType = "pan";
+      else if (docId.includes("aadhaar")) docType = "aadhaar";
+      else if (docId.includes("income")) docType = "income_cert";
+      else if (docId.includes("passbook")) docType = "passbook";
+
+      submittedDocs.push({
+        id: "doc-" + docId,
+        name: docTitle,
+        filename: filename,
+        size: (0.7 + (idx * 0.2)).toFixed(1) + " MB",
+        type: docType,
+        status: "pending",
+        details: {
+          applicant,
+          filename,
+          source: uploadStatus === "manual" ? "Manually Uploaded (.pdf)" : "Auto-Prefilled from Vault Profile",
+          hospital: serviceDetails.hospital || "Sassoon General Hospital Pune",
+          childName: serviceDetails.child_name || "Pravin Krushna Bhosale",
+          dob: serviceDetails.child_dob || "2026-02-10 04:30",
+          college: serviceDetails.college || "AISSMS IOIT Pune",
+          course: serviceDetails.course || "B.Tech Computer Engineering",
+          percentage: serviceDetails.marks || "88.50%",
+          receiptNo: "FR-2026-" + (88210 + idx)
+        }
+      });
+    });
+
     const newApp = {
       id, service: service.name, department: service.department, applicant, email,
       date: new Date().toISOString().slice(0, 10), status: "Submitted", step: "Application received",
       serviceDetails, note: document.getElementById("appNote")?.value.trim() || "", history: ["Application received", "Consent recorded"]
     };
+    if (submittedDocs.length > 0) {
+      newApp.verification = {
+        registryStatus: "verified",
+        registrySystem: "",
+        registryTitle: "",
+        registryData: {},
+        registryMessage: "",
+        documents: submittedDocs
+      };
+    }
     ensureAppVerification(newApp);
     state.applications.unshift(newApp);
     logAudit("Submitted service request", id, applicant);
