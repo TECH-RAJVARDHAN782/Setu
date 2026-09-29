@@ -444,7 +444,7 @@ function dashboard() {
   const citizenContext = isAdmin() ? "All departments" : isReviewer() ? currentUser.department : "Your services";
   const adminAction = isAdmin() ? `<button class="btn" data-action="export-apps">Export Data</button>` : "";
 
-  return `${heading(`Welcome, ${esc(currentUser.name.split(" ")[0])}`, `${citizenContext} · Interoperability dashboard for government services.`, `${adminAction}<button class="btn btn-primary" data-action="new-application">+ New Service Request</button>`)}
+  return `${heading(`Welcome, ${esc(currentUser.name.split(" ")[0])}`, `${citizenContext} · Interoperability dashboard for government services.`, `${adminAction}${isCitizen() ? `<button class="btn btn-primary" data-action="new-application">+ New Service Request</button>` : ""}`)}
  <div class="grid metrics">
   <div class="metric">
     <div class="metric-top"><span>${isAdmin() ? "Total Applications" : "Your Requests"}</span>
@@ -1932,30 +1932,65 @@ function handleServiceDocUpload(input, docId) {
 }
 window.handleServiceDocUpload = handleServiceDocUpload;
 
+let savedApplyFormDraft = null;
+
+function captureApplyFormDraft() {
+  const form = document.getElementById("appForm");
+  if (!form) return;
+  const serviceId = document.getElementById("serviceSelect")?.value || "";
+  const values = {};
+  form.querySelectorAll("input, select, textarea").forEach(el => {
+    if (el.id) {
+      values[el.id] = el.type === "checkbox" ? el.checked : el.value;
+    }
+  });
+  savedApplyFormDraft = { serviceId, values };
+}
+
+function restoreApplyFormDraft() {
+  const draft = savedApplyFormDraft;
+  const serviceId = draft?.serviceId || (state.services.find(s => s.active)?.id || "scholarship");
+  openApply(serviceId);
+  if (draft && draft.values) {
+    setTimeout(() => {
+      Object.entries(draft.values).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (el.type === "checkbox") el.checked = !!val;
+          else el.value = val;
+        }
+      });
+    }, 15);
+  }
+}
+window.captureApplyFormDraft = captureApplyFormDraft;
+window.restoreApplyFormDraft = restoreApplyFormDraft;
+
 function viewServiceSpecificDoc(docId, docTitle) {
+  captureApplyFormDraft();
   const hiddenInp = document.getElementById("doc_val_" + docId);
   const filename = hiddenInp ? hiddenInp.value : (docTitle.replace(/[^a-zA-Z0-9]/g, "_") + ".pdf");
   const uploadStatus = hiddenInp ? hiddenInp.dataset.status : "prefilled";
   const profile = getUserProfile(currentUser?.email);
 
-  openModal("PDF Preview - " + esc(filename), `
+  openModal("PDF Document Viewer — " + esc(filename), `
     <div class="pdf-modal-container">
       <div class="pdf-toolbar">
         <div class="pdf-toolbar-left">
           <span class="pdf-badge">PDF</span>
           <span class="pdf-title">${esc(filename)}</span>
-          <span style="font-size:9px;color:#94a3b8">Source: ${uploadStatus === "manual" ? "Manually Uploaded (.pdf)" : "Pre-filled from Profile Vault"}</span>
+          <span style="font-size:9px;color:#94a3b8">Page 1 / 1 · 100% · Official PDF</span>
         </div>
         <div class="pdf-toolbar-right">
-          <button class="btn btn-small" onclick="window.print()">Print</button>
-          <button class="btn btn-small btn-primary" data-action="close-modal">Close Preview</button>
+          <button class="btn btn-small" onclick="window.print()">Print Document</button>
+          <button class="btn btn-small btn-primary" data-action="back-to-apply">Back to Application</button>
         </div>
       </div>
       <div class="pdf-body-scroll">
         <div class="pdf-page-sheet">
           <div class="pdf-watermark">SETU CITIZEN VAULT PREVIEW</div>
           <div class="pdf-header">
-            <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA - SETU CITIZEN VAULT</div>
+            <div class="pdf-emblem-text">GOVERNMENT OF MAHARASHTRA · SETU CITIZEN VAULT</div>
             <div class="pdf-gov-title">${esc(docTitle.toUpperCase())}</div>
             <div class="pdf-doc-type">Citizen Supporting Document Attachment</div>
           </div>
@@ -1984,8 +2019,16 @@ function viewServiceSpecificDoc(docId, docTitle) {
           </div>
         </div>
       </div>
+      <div class="pdf-footer-verification">
+        <div class="pdf-verif-status">
+          <b>Official Verification Status:</b>
+          <span class="status status-success">${uploadStatus === "manual" ? "MANUALLY UPLOADED" : "PREFILLED FROM VAULT"}</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:6px">· Ready for review and submission</span>
+        </div>
+        <button class="btn btn-small btn-primary" data-action="back-to-apply">Back to Application</button>
+      </div>
     </div>`,
-    `<button class="btn btn-primary" data-action="close-modal">Done</button>`
+    ""
   );
 }
 window.viewServiceSpecificDoc = viewServiceSpecificDoc;
@@ -3167,6 +3210,7 @@ document.addEventListener("click", e => {
   if (a === "apply-service") openApply(el.dataset.service);
   if (a === "close-modal") closeModal();
   if (a === "backdrop-close" && e.target === el) closeModal();
+  if (a === "back-to-apply") { restoreApplyFormDraft(); return; }
   if (a === "application-detail") showApplication(el.dataset.id);
   if (a === "view-certificate") generateCertificate(el.dataset.id);
 
